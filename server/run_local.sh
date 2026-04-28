@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 # 필요 시 아래 환경변수를 설정해서 실행하세요.
