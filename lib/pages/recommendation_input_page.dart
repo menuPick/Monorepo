@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:user/data/user_api.dart';
 import 'package:user/pages/recommendation_result_page.dart';
 import 'package:user/widgets/app_drawer.dart';
+import 'package:user/widgets/entrance_animations.dart';
 
 class RecommendationInputPage extends StatefulWidget {
   const RecommendationInputPage({super.key});
@@ -95,58 +96,87 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Builder(
-                builder: (context) => _MenuButton(
-                  color: borderColor,
-                  onTap: () => Scaffold.of(context).openDrawer(),
+              EntranceFadeSlide(
+                fromYOffset: 10,
+                duration: const Duration(milliseconds: 420),
+                child: Builder(
+                  builder: (context) => _MenuButton(
+                    color: borderColor,
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                '이 메뉴 먹고 싶어요!',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 34,
-                  height: 1.1,
-                  fontWeight: FontWeight.w900,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 90),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 520),
+                child: Text(
+                  '이 메뉴 먹고 싶어요!',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 34,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               const SizedBox(height: 26),
-              _OutlineField(
-                hint: '메뉴명',
-                borderColor: borderColor,
-                hintColor: hintColor,
-                height: 72,
-                controller: _menuNameController,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 160),
+                fromYOffset: 18,
+                duration: const Duration(milliseconds: 560),
+                child: _OutlineField(
+                  hint: '메뉴명',
+                  borderColor: borderColor,
+                  hintColor: hintColor,
+                  height: 72,
+                  controller: _menuNameController,
+                ),
               ),
               const SizedBox(height: 24),
-              _OutlineField(
-                hint: '메뉴를 먹고 싶은 이유',
-                borderColor: borderColor,
-                hintColor: hintColor,
-                height: 260,
-                maxLines: 6,
-                controller: _reasonController,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 220),
+                fromYOffset: 18,
+                duration: const Duration(milliseconds: 600),
+                child: _OutlineField(
+                  hint: '메뉴를 먹고 싶은 이유',
+                  borderColor: borderColor,
+                  hintColor: hintColor,
+                  height: 260,
+                  maxLines: 6,
+                  controller: _reasonController,
+                ),
               ),
               const SizedBox(height: 28),
-              _PrimaryButton(
-                label: '메뉴를 올려봅시다.',
-                backgroundColor: const Color(0xFF0B18F1),
-                textColor: Colors.white,
-                onTap: _isSaving ? () {} : _handleRecommend,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 300),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 560),
+                child: _PrimaryButton(
+                  label: '메뉴를 올려봅시다.',
+                  backgroundColor: const Color(0xFF0B18F1),
+                  textColor: Colors.white,
+                  onTap: _isSaving ? () {} : _handleRecommend,
+                ),
               ),
               const SizedBox(height: 20),
-              _PrimaryButton(
-                label: _isSaving ? '저장 중...' : 'AI에게 추천받기',
-                backgroundColor: isDark ? const Color(0xFFB6B8F3) : const Color(0xFFB6B8F3),
-                textColor: isDark ? Colors.white : Colors.white,
-                onTap: _isSaving
-                    ? () {}
-                    : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('현재는 "메뉴를 올려봅시다." 버튼으로 서버에 저장합니다.')),
-                        );
-                      },
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 340),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 560),
+                child: _PrimaryButton(
+                  label: _isSaving ? '저장 중...' : 'AI에게 추천받기',
+                  backgroundColor: isDark ? const Color(0xFFB6B8F3) : const Color(0xFFB6B8F3),
+                  textColor: isDark ? Colors.white : Colors.white,
+                  onTap: _isSaving
+                      ? () {}
+                      : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('현재는 "메뉴를 올려봅시다." 버튼으로 서버에 저장합니다.')),
+                          );
+                        },
+                ),
               ),
             ],
           ),

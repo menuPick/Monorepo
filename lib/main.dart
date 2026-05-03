@@ -4,6 +4,7 @@
                 import 'package:user/pages/recommendation_result_page.dart';
                 import 'package:user/theme/theme_controller.dart';
                 import 'package:user/widgets/app_drawer.dart';
+                 import 'package:user/widgets/entrance_animations.dart';
 
     void main() {
       runApp(const MyApp());
@@ -52,16 +53,30 @@
               padding: const EdgeInsets.fromLTRB(30, 0, 30, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Builder(
-                      builder: (context) => _MenuButton(
-                        onTap: () => Scaffold.of(context).openDrawer(),
-                      ),
-                    ),
-                  SizedBox(height: 14),
-                    const _HeaderTitle(),
-                  SizedBox(height: 24),
-                    _PromoCard(
+                   children: [
+                     EntranceFadeSlide(
+                       fromYOffset: 10,
+                       duration: const Duration(milliseconds: 420),
+                       child: Builder(
+                         builder: (context) => _MenuButton(
+                           onTap: () => Scaffold.of(context).openDrawer(),
+                         ),
+                       ),
+                     ),
+                   SizedBox(height: 14),
+                     const EntranceFadeSlide(
+                       delay: Duration(milliseconds: 80),
+                       fromYOffset: 14,
+                       duration: Duration(milliseconds: 520),
+                       child: _HeaderTitle(),
+                     ),
+                   SizedBox(height: 24),
+                     EntranceBlurSlide(
+                       delay: const Duration(milliseconds: 140),
+                       duration: const Duration(milliseconds: 720),
+                       fromYOffset: 54,
+                       maxBlurSigma: 16,
+                       child: _PromoCard(
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -80,8 +95,14 @@
                       iconColor: Color(0xFFF7F8FF),
                       assetPath: 'student-assets/Icon/Edit Column.png',
                   ),
+                     ),
                   SizedBox(height: 54),
-                    _PromoCard(
+                     EntranceBlurSlide(
+                       delay: const Duration(milliseconds: 260),
+                       duration: const Duration(milliseconds: 760),
+                       fromYOffset: 54,
+                       maxBlurSigma: 16,
+                       child: _PromoCard(
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -100,6 +121,7 @@
                     iconColor: Colors.white,
                     assetPath: 'student-assets/Icon/Approval.png',
                   ),
+                     ),
                 ],
               ),
             ),

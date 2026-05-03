@@ -10,5 +10,9 @@ fi
 
 "$ROOT_DIR/scripts/use_admin_web_assets.sh"
 cd "$ROOT_DIR"
-flutter run -d chrome -t lib/admin_main.dart "${DART_DEFINES[@]}"
+if (( ${#DART_DEFINES[@]} )); then
+  flutter run -d chrome -t lib/admin_main.dart "${DART_DEFINES[@]}"
+else
+  flutter run -d chrome -t lib/admin_main.dart
+fi
 

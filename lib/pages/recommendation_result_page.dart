@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:user/data/user_api.dart';
 import 'package:user/widgets/app_drawer.dart';
+import 'package:user/widgets/entrance_animations.dart';
 
 class RecommendationResultPage extends StatefulWidget {
   const RecommendationResultPage({super.key});
@@ -73,27 +74,40 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Builder(
-                builder: (context) => _MenuButton(
-                  color: borderColor,
-                  onTap: () => Scaffold.of(context).openDrawer(),
+              EntranceFadeSlide(
+                fromYOffset: 10,
+                duration: const Duration(milliseconds: 420),
+                child: Builder(
+                  builder: (context) => _MenuButton(
+                    color: borderColor,
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                '결정된 메뉴는?',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 34,
-                  height: 1.1,
-                  fontWeight: FontWeight.w900,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 90),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 520),
+                child: Text(
+                  '결정된 메뉴는?',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 34,
+                    height: 1.1,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               const SizedBox(height: 26),
-              FutureBuilder<_LatestState>(
-                future: _latestFuture,
-                builder: (context, snapshot) {
-                  final state = snapshot.data;
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 170),
+                fromYOffset: 18,
+                duration: const Duration(milliseconds: 560),
+                child: FutureBuilder<_LatestState>(
+                  future: _latestFuture,
+                  builder: (context, snapshot) {
+                    final state = snapshot.data;
 
                   // 로딩 중에도 테스트/실사용 모두에서 화면이 즉시 그려지도록
                   // 애니메이션 대신 정적인 placeholder를 사용합니다.
@@ -134,41 +148,52 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                         : '원한 메뉴: ${latest.menuName}\n이유: ${latest.reason}';
                   }
 
-                  return Column(
-                    children: [
-                      _ValueBox(
-                        value: menuText,
-                        borderColor: borderColor,
-                        hintColor: hintColor,
-                        height: 72,
-                      ),
-                      const SizedBox(height: 24),
-                      _ValueBox(
-                        value: reasonText,
-                        borderColor: borderColor,
-                        hintColor: hintColor,
-                        height: 260,
-                      ),
-                    ],
-                  );
-                },
+                    return Column(
+                      children: [
+                        _ValueBox(
+                          value: menuText,
+                          borderColor: borderColor,
+                          hintColor: hintColor,
+                          height: 72,
+                        ),
+                        const SizedBox(height: 24),
+                        _ValueBox(
+                          value: reasonText,
+                          borderColor: borderColor,
+                          hintColor: hintColor,
+                          height: 260,
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 28),
-              _PrimaryButton(
-                label: '맛있게 드십시오!',
-                backgroundColor: const Color(0xFF0B18F1),
-                textColor: Colors.white,
-                // 서버 메뉴가 아직 공개되지 않았거나(결정 중),
-                // 네트워크 오류가 발생한 경우에도 사용자가 다시 시도할 수 있도록
-                // 버튼을 새로고침으로 동작시킵니다.
-                onTap: _reload,
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 260),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 560),
+                child: _PrimaryButton(
+                  label: '맛있게 드십시오!',
+                  backgroundColor: const Color(0xFF0B18F1),
+                  textColor: Colors.white,
+                  // 서버 메뉴가 아직 공개되지 않았거나(결정 중),
+                  // 네트워크 오류가 발생한 경우에도 사용자가 다시 시도할 수 있도록
+                  // 버튼을 새로고침으로 동작시킵니다.
+                  onTap: _reload,
+                ),
               ),
               const SizedBox(height: 20),
-              _PrimaryButton(
-                label: 'AI에게 추천받기',
-                backgroundColor: isDark ? const Color(0xFFB6B8F3) : const Color(0xFFB6B8F3),
-                textColor: Colors.white,
-                onTap: () {},
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 300),
+                fromYOffset: 14,
+                duration: const Duration(milliseconds: 560),
+                child: _PrimaryButton(
+                  label: 'AI에게 추천받기',
+                  backgroundColor: isDark ? const Color(0xFFB6B8F3) : const Color(0xFFB6B8F3),
+                  textColor: Colors.white,
+                  onTap: () {},
+                ),
               ),
             ],
           ),

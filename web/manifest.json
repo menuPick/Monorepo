@@ -1,11 +1,11 @@
 {
-  "name": "MenuPick",
-  "short_name": "MenuPick",
+  "name": "MenuPick Admin",
+  "short_name": "Admin",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0175C2",
   "theme_color": "#0175C2",
-  "description": "메뉴 추천/문의 사용자 앱 (Flutter Web PWA)",
+  "description": "MenuPick 관리자 대시보드 (Flutter Web PWA)",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [
