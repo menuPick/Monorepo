@@ -41,8 +41,13 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
           set -euo pipefail
+          OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
-          export BASE_HREF="/${REPO_NAME}/"
+          if [[ "${REPO_NAME}" == "${OWNER}.github.io" ]]; then
+            export BASE_HREF="/"
+          else
+            export BASE_HREF="/${REPO_NAME}/"
+          fi
           ./scripts/build_user_web.sh
 
           mkdir -p site
@@ -54,8 +59,13 @@ jobs:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
           set -euo pipefail
+          OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
-          export BASE_HREF="/${REPO_NAME}/admin/"
+          if [[ "${REPO_NAME}" == "${OWNER}.github.io" ]]; then
+            export BASE_HREF="/admin/"
+          else
+            export BASE_HREF="/${REPO_NAME}/admin/"
+          fi
           ./scripts/build_admin_web.sh
 
           mkdir -p site/admin
