@@ -84,6 +84,7 @@ public final class MenuPickServerSmokeTest {
         }
         return builder
                 .header("Content-Type", "application/json")
+                .header("X-MenuPick-User-Id", "smoke-test-user")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
     }
@@ -108,4 +109,3 @@ public final class MenuPickServerSmokeTest {
         return value;
     }
 }
-

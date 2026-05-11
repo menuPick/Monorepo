@@ -48,6 +48,11 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
         reason: reason.isEmpty ? '이유 미입력' : reason,
       );
       isSaved = true;
+    } on MonthlyRecommendationLimitException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     } on UserApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,4 +309,3 @@ class _PrimaryButton extends StatelessWidget {
     );
   }
 }
-

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 빌드/실행 시 아래처럼 서버 주소를 바꿀 수 있습니다.
 /// flutter run --dart-define=API_BASE_URL=http://localhost:8080
@@ -21,6 +23,7 @@ class UserApi {
 
   final http.Client _client;
   final String baseUrl;
+  static const _kAnonymousUserId = 'anonymous_recommendation_user_id';
 
   Uri _uri(String path, [Map<String, String>? query]) {
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
@@ -61,10 +64,14 @@ class UserApi {
     required String menuName,
     required String reason,
   }) async {
+    final userId = await _anonymousUserId();
     final response = await _client
         .post(
           _uri('/api/recommendations'),
-          headers: const {'Content-Type': 'application/json; charset=utf-8'},
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'X-MenuPick-User-Id': userId,
+          },
           body: jsonEncode({
             'menuName': menuName,
             'reason': reason,
@@ -75,6 +82,11 @@ class UserApi {
         .timeout(const Duration(seconds: 6));
 
     final body = _decodeJson(response);
+    if (response.statusCode == 429 && body['error']?.toString() == 'monthly_limit_exceeded') {
+      throw MonthlyRecommendationLimitException(
+        body['message']?.toString() ?? '메뉴 추천은 한 달에 한 번만 올릴 수 있습니다.',
+      );
+    }
     if (response.statusCode != 201) {
       throw UserApiException(body['message']?.toString() ?? '추천 저장 실패');
     }
@@ -125,6 +137,20 @@ class UserApi {
       return <String, dynamic>{'message': 'Invalid response'};
     }
   }
+
+  Future<String> _anonymousUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kAnonymousUserId);
+    if (saved != null && saved.isNotEmpty) {
+      return saved;
+    }
+
+    final random = Random.secure();
+    final bytes = List<int>.generate(24, (_) => random.nextInt(256));
+    final userId = base64UrlEncode(bytes).replaceAll('=', '');
+    await prefs.setString(_kAnonymousUserId, userId);
+    return userId;
+  }
 }
 
 class NotPublishedException implements Exception {
@@ -171,3 +197,6 @@ class UserApiException implements Exception {
   String toString() => message;
 }
 
+class MonthlyRecommendationLimitException extends UserApiException {
+  MonthlyRecommendationLimitException(super.message);
+}

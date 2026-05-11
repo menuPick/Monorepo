@@ -29,6 +29,70 @@ public final class MySqlDatabase implements DatabaseRepository {
     }
 
     @Override
+    public synchronized RecommendationRecord saveMonthlyRecommendation(
+            String userKey,
+            String monthKey,
+            String menuName,
+            String reason,
+            String recommendedMenu
+    ) throws IOException {
+        String now = Instant.now().toString();
+        boolean prevAutoCommit;
+        try {
+            prevAutoCommit = connection.getAutoCommit();
+        } catch (SQLException ex) {
+            throw new IOException("트랜잭션 설정 실패", ex);
+        }
+
+        try {
+            connection.setAutoCommit(false);
+
+            String limitSql = "INSERT INTO recommendation_monthly_limits (user_key, month_key, created_at) VALUES (?, ?, ?)";
+            try (PreparedStatement statement = connection.prepareStatement(limitSql)) {
+                statement.setString(1, userKey);
+                statement.setString(2, monthKey);
+                statement.setString(3, now);
+                statement.executeUpdate();
+            }
+
+            String sql = "INSERT INTO recommendations (menu_name, reason, recommended_menu, created_at) VALUES (?, ?, ?, ?)";
+            RecommendationRecord record;
+            try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                statement.setString(1, menuName);
+                statement.setString(2, reason);
+                statement.setString(3, recommendedMenu);
+                statement.setString(4, now);
+                statement.executeUpdate();
+
+                long id = 0L;
+                try (ResultSet keys = statement.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        id = keys.getLong(1);
+                    }
+                }
+                record = new RecommendationRecord(id, menuName, reason, recommendedMenu, now);
+            }
+
+            connection.commit();
+            return record;
+        } catch (SQLException ex) {
+            try {
+                connection.rollback();
+            } catch (SQLException ignored) {
+            }
+            if ("23000".equals(ex.getSQLState())) {
+                return null;
+            }
+            throw new IOException("추천 저장 실패", ex);
+        } finally {
+            try {
+                connection.setAutoCommit(prevAutoCommit);
+            } catch (SQLException ignored) {
+            }
+        }
+    }
+
+    @Override
     public synchronized RecommendationRecord saveRecommendation(
             String menuName,
             String reason,
@@ -312,11 +376,20 @@ public final class MySqlDatabase implements DatabaseRepository {
                 )
                 """;
 
+        String monthlyLimitSql = """
+                CREATE TABLE IF NOT EXISTS recommendation_monthly_limits (
+                    user_key VARCHAR(128) NOT NULL,
+                    month_key VARCHAR(7) NOT NULL,
+                    created_at VARCHAR(64) NOT NULL,
+                    PRIMARY KEY (user_key, month_key)
+                )
+                """;
+
         try (Statement statement = connection.createStatement()) {
             statement.execute(recommendationsSql);
             statement.execute(inquiriesSql);
             statement.execute(decisionSql);
+            statement.execute(monthlyLimitSql);
         }
     }
 }
-

@@ -8,6 +8,14 @@ import java.io.IOException;
 import java.util.List;
 
 public interface DatabaseRepository {
+    RecommendationRecord saveMonthlyRecommendation(
+            String userKey,
+            String monthKey,
+            String menuName,
+            String reason,
+            String recommendedMenu
+    ) throws IOException;
+
     RecommendationRecord saveRecommendation(String menuName, String reason, String recommendedMenu) throws IOException;
 
     RecommendationRecord getLatestRecommendation() throws IOException;
@@ -37,4 +45,3 @@ public interface DatabaseRepository {
         // no-op
     }
 }
-

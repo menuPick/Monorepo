@@ -29,18 +29,7 @@ if [ -z "${ADMIN_ID_HASH:-}" ] && [ -z "${ADMIN_ID_HASH_FILE:-}" ]; then
   exit 1
 fi
 
-ARGS="--port=${PORT}"
+export DB_URL DB_USER DB_PASSWORD
 
-if [ -n "${DB_URL}" ]; then
-  ARGS="$ARGS --db-url=${DB_URL}"
-fi
-
-if [ -n "${DB_USER}" ]; then
-  ARGS="$ARGS --db-user=${DB_USER}"
-fi
-
-# 빈 문자열 비밀번호도 허용 (로컬 개발 등)
-ARGS="$ARGS --db-password=${DB_PASSWORD}"
-
-exec java -jar /app/menu-pick-server.jar $ARGS
-
+# DB 접속 정보는 환경변수로 전달해 프로세스 목록에 비밀번호가 노출되지 않게 합니다.
+exec java -jar /app/menu-pick-server.jar "--port=${PORT}"

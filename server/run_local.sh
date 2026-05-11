@@ -11,6 +11,7 @@ PORT=${PORT:-8080}
 DB_URL=${DB_URL:-"jdbc:mysql://localhost:3306/menupick?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true"}
 DB_USER=${DB_USER:-root}
 DB_PASSWORD=${DB_PASSWORD:-}
+export PORT DB_URL DB_USER DB_PASSWORD
 
 echo "[INFO] Starting MenuPickServer"
 echo "  PORT=$PORT"
@@ -26,5 +27,6 @@ fi
 
 cd "$(dirname "$0")"
 
-# 서버는 환경변수(DB_URL/DB_USER/DB_PASSWORD)를 읽습니다.
-mvn -q exec:java -Dexec.args="--port=$PORT --db-url=$DB_URL --db-user=$DB_USER --db-password=$DB_PASSWORD"
+# 서버는 DB_URL/DB_USER/DB_PASSWORD를 환경변수로 읽습니다.
+# DB 비밀번호를 프로세스 인자에 싣지 않아 ps 목록 노출을 피합니다.
+mvn -q exec:java -Dexec.args="--port=$PORT"
