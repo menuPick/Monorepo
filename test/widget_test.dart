@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:user/admin/pages/admin_login_page.dart';
 import 'package:user/main.dart';
 
 void main() {
@@ -101,5 +102,25 @@ void main() {
 
     final welcomeText = tester.widget<Text>(find.text('환영합니다'));
     expect(welcomeText.style?.color, Colors.white);
+  });
+
+  testWidgets('admin login masks the admin ID and can reveal it', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(home: AdminLoginPage(onLoginSuccess: () {})),
+    );
+
+    TextField adminIdField = tester.widget<TextField>(find.byType(TextField));
+    expect(adminIdField.obscureText, isTrue);
+    expect(find.text('<0>'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'secret-admin');
+    await tester.tap(find.byTooltip('관리자 ID 보기'));
+    await tester.pump();
+
+    adminIdField = tester.widget<TextField>(find.byType(TextField));
+    expect(adminIdField.obscureText, isFalse);
+    expect(find.text('<1>'), findsOneWidget);
   });
 }
