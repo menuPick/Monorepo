@@ -80,3 +80,10 @@ jobs:
           publish_dir: site
           force_orphan: true
 
+- name: Build USER (root)
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          echo "API_BASE_URL=${API_BASE_URL}"
+          ...
