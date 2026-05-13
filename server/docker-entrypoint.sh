@@ -5,6 +5,7 @@ PORT="${PORT:-8080}"
 DB_URL="${DB_URL:-}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"
+DB_PROTOCOL="${DB_PROTOCOL:-mysql}" # mysql | mariadb
 
 # Railway MySQL 플러그인(또는 유사 환경) 호환:
 # DB_URL을 직접 주지 않아도 MYSQLHOST/MYSQLPORT/MYSQLDATABASE/... 로부터 조합합니다.
@@ -18,6 +19,39 @@ if [ -z "${DB_URL}" ] && [ -n "${MYSQLHOST:-}" ]; then
   fi
   if [ -z "${DB_PASSWORD}" ] && [ -n "${MYSQLPASSWORD:-}" ]; then
     DB_PASSWORD="${MYSQLPASSWORD}"
+  fi
+fi
+
+# Cloudtype/일반 PaaS 호환:
+# 아래 변수들 중 하나 세트가 있는 경우 DB_URL을 조합합니다.
+# - DB_HOST/DB_PORT/DB_DATABASE 또는 DB_USERNAME/DB_PASSWORD
+# - DB_url/DB_port/DB_dataBaseName 또는 DB_name/DB_password (일부 가이드에서 쓰는 형태)
+if [ -z "${DB_URL}" ]; then
+  DB_HOST_FALLBACK="${DB_HOST:-${DB_url:-}}"
+  DB_PORT_FALLBACK="${DB_PORT:-${DB_port:-}}"
+  DB_NAME_FALLBACK="${DB_DATABASE:-${DB_dataBaseName:-}}"
+
+  if [ -n "${DB_HOST_FALLBACK}" ]; then
+    DB_PORT_FALLBACK="${DB_PORT_FALLBACK:-3306}"
+    DB_NAME_FALLBACK="${DB_NAME_FALLBACK:-menupick}"
+
+    if [ "${DB_PROTOCOL}" = "mariadb" ]; then
+      DB_URL="jdbc:mariadb://${DB_HOST_FALLBACK}:${DB_PORT_FALLBACK}/${DB_NAME_FALLBACK}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+    else
+      DB_URL="jdbc:mysql://${DB_HOST_FALLBACK}:${DB_PORT_FALLBACK}/${DB_NAME_FALLBACK}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+    fi
+
+    # 사용자/비밀번호 변수명이 다른 경우 자동 매핑
+    if [ "${DB_USER}" = "root" ] && [ -n "${DB_USERNAME:-}" ]; then
+      DB_USER="${DB_USERNAME}"
+    fi
+    if [ "${DB_USER}" = "root" ] && [ -n "${DB_name:-}" ]; then
+      DB_USER="${DB_name}"
+    fi
+
+    if [ -z "${DB_PASSWORD}" ] && [ -n "${DB_password:-}" ]; then
+      DB_PASSWORD="${DB_password}"
+    fi
   fi
 fi
 
