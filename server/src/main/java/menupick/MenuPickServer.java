@@ -776,7 +776,7 @@ public final class MenuPickServer {
             headers.set("Access-Control-Allow-Origin", origin);
             headers.set("Vary", "Origin");
         }
-        headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Menupick-User-Id");
         headers.set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
     }
 
