@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 const bool kIsWidgetTest = bool.fromEnvironment('FLUTTER_TEST');
@@ -31,12 +32,16 @@ class ModelBanner extends StatelessWidget {
       );
     }
 
+    final assetSrc = kIsWeb
+        ? 'assets/assets/3d/cute_cat.glb'
+        : 'assets/3d/cute_cat.glb';
+
     return SizedBox(
       key: kModelBannerKey,
       height: height,
       width: double.infinity,
-      child: const ModelViewer(
-        src: 'assets/3d/cute_cat.glb',
+      child: ModelViewer(
+        src: assetSrc,
         autoRotate: true,
         cameraControls: true,
         cameraOrbit: '90deg 60deg 2.5m',
