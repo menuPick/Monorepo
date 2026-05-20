@@ -38,6 +38,7 @@ dependencies:
   path: ^1.9.0
   http: ^1.2.2
   shared_preferences: ^2.3.2
+  model_viewer_plus: ^1.7.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,7 @@ flutter:
   assets:
     - student-assets/
     - student-assets/Icon/
+    - assets/3d/
 
   fonts:
     - family: Pretendard

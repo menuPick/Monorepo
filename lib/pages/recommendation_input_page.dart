@@ -4,6 +4,7 @@ import 'package:user/data/user_api.dart';
 import 'package:user/pages/recommendation_result_page.dart';
 import 'package:user/widgets/app_drawer.dart';
 import 'package:user/widgets/entrance_animations.dart';
+import 'package:user/widgets/model_banner.dart';
 
 class RecommendationInputPage extends StatefulWidget {
   const RecommendationInputPage({super.key});
@@ -111,7 +112,10 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              const ModelBanner(),
+              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               EntranceFadeSlide(
                 delay: const Duration(milliseconds: 90),
                 fromYOffset: 14,

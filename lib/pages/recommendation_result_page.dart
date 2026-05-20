@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:user/data/user_api.dart';
 import 'package:user/widgets/app_drawer.dart';
 import 'package:user/widgets/entrance_animations.dart';
+import 'package:user/widgets/model_banner.dart';
 
 class RecommendationResultPage extends StatefulWidget {
   const RecommendationResultPage({super.key});
@@ -84,7 +85,10 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              const ModelBanner(),
+              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               EntranceFadeSlide(
                 delay: const Duration(milliseconds: 90),
                 fromYOffset: 14,
@@ -358,4 +362,3 @@ class _LatestState {
   const _LatestState.error(String message)
       : this._(_LatestStateKind.error, null, message);
 }
-

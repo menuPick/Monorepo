@@ -4,6 +4,7 @@
                 import 'package:user/pages/recommendation_result_page.dart';
                 import 'package:user/theme/theme_controller.dart';
                 import 'package:user/widgets/app_drawer.dart';
+                import 'package:user/widgets/model_banner.dart';
                  import 'package:user/widgets/entrance_animations.dart';
 
     void main() {
@@ -63,12 +64,24 @@
                          ),
                        ),
                      ),
-                   SizedBox(height: 14),
-                     const EntranceFadeSlide(
+                     const SizedBox(height: 16),
+                     const SizedBox(height: 8),
+                     EntranceFadeSlide(
                        delay: Duration(milliseconds: 80),
                        fromYOffset: 14,
                        duration: Duration(milliseconds: 520),
-                       child: _HeaderTitle(),
+                       child: Row(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           const Expanded(child: _HeaderTitle()),
+                           const SizedBox(width: 12),
+                           const SizedBox(
+                             width: 140,
+                             height: 120,
+                             child: ModelBanner(height: 120),
+                           ),
+                         ],
+                       ),
                      ),
                    SizedBox(height: 24),
                      EntranceBlurSlide(
@@ -317,4 +330,10 @@
         return Icon(icon, size: 40, color: color);
       }
     }
+
+
+
+
+
+
 

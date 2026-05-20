@@ -59,6 +59,14 @@ app.*.map.json
 # Internal docs (keep local)
 /lib/admin/README_admin_pwa.md
 
+# Local README not for commit
+/README.md
+
+# All README files (keep local)
+**/README*
+
+# Hashed build folder
+/0.128.0/
+
 # Local machine configs
 **/local.properties
-

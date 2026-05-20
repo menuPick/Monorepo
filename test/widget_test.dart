@@ -3,13 +3,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:user/admin/pages/admin_login_page.dart';
 import 'package:user/main.dart';
+import 'package:user/widgets/model_banner.dart';
 
 void main() {
+  setUpAll(() {
+    ModelBannerConfig.forcePlaceholder = true;
+  });
+
   testWidgets('shows the menu recommendation home screen', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
 
+    expect(find.byKey(kModelBannerKey), findsOneWidget);
     expect(find.text('환영합니다'), findsOneWidget);
     expect(find.text('식단 추천 앱'), findsOneWidget);
     expect(find.text('메뉴픽'), findsOneWidget);
@@ -67,6 +73,10 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
+    await tester.scrollUntilVisible(
+      find.text('추천메뉴를 확인하세요!'),
+      200,
+    );
     await tester.tap(find.text('추천메뉴를 확인하세요!'));
     await tester.pumpAndSettle();
 

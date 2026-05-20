@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:user/data/user_api.dart';
 import 'package:user/widgets/app_drawer.dart';
+import 'package:user/widgets/model_banner.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -44,7 +45,10 @@ class _AboutPageState extends State<AboutPage> {
                   onTap: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              const ModelBanner(),
+              const SizedBox(height: 12),
+              const SizedBox(height: 18),
               Text(
                 '문의',
                 style: TextStyle(
@@ -241,4 +245,3 @@ class _InquiryBox extends StatelessWidget {
     );
   }
 }
-
