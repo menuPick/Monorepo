@@ -51,6 +51,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+# Local override to suppress debug logging in model_viewer_plus.
+dependency_overrides:
+  model_viewer_plus:
+    path: packages/model_viewer_plus
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

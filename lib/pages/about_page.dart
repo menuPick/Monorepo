@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:user/data/user_api.dart';
-import 'package:user/widgets/app_drawer.dart';
 import 'package:user/widgets/model_banner.dart';
+import 'package:user/widgets/responsive_scaffold.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -30,21 +30,15 @@ class _AboutPageState extends State<AboutPage> {
     final textColor = isDark ? Colors.white : Colors.black;
     final hintColor = isDark ? const Color(0xFF8F8F8F) : const Color(0xFFA8A8A8);
 
-    return Scaffold(
+    return ResponsiveScaffold(
       backgroundColor: backgroundColor,
-      drawer: const AppDrawer(),
-      body: SafeArea(
+      currentIndex: 3,
+      child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Builder(
-                builder: (context) => _MenuButton(
-                  color: borderColor,
-                  onTap: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
               const SizedBox(height: 16),
               const ModelBanner(),
               const SizedBox(height: 12),
@@ -125,34 +119,6 @@ class _AboutPageState extends State<AboutPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuButton extends StatelessWidget {
-  const _MenuButton({required this.onTap, required this.color});
-
-  final VoidCallback onTap;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color, width: 1),
-        ),
-        child: Icon(
-          Icons.menu_rounded,
-          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-          size: 34,
         ),
       ),
     );

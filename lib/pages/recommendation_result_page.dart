@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:user/data/user_api.dart';
-import 'package:user/widgets/app_drawer.dart';
 import 'package:user/widgets/entrance_animations.dart';
 import 'package:user/widgets/model_banner.dart';
+import 'package:user/widgets/responsive_scaffold.dart';
 
 class RecommendationResultPage extends StatefulWidget {
   const RecommendationResultPage({super.key});
@@ -66,25 +66,15 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
     final textColor = isDark ? Colors.white : Colors.black;
     final hintColor = isDark ? const Color(0xFF8F8F8F) : const Color(0xFFA8A8A8);
 
-    return Scaffold(
+    return ResponsiveScaffold(
       backgroundColor: backgroundColor,
-      drawer: const AppDrawer(),
-      body: SafeArea(
+      currentIndex: 2,
+      child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              EntranceFadeSlide(
-                fromYOffset: 10,
-                duration: const Duration(milliseconds: 420),
-                child: Builder(
-                  builder: (context) => _MenuButton(
-                    color: borderColor,
-                    onTap: () => Scaffold.of(context).openDrawer(),
-                  ),
-                ),
-              ),
               const SizedBox(height: 16),
               const ModelBanner(),
               const SizedBox(height: 12),
@@ -94,7 +84,7 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                 fromYOffset: 14,
                 duration: const Duration(milliseconds: 520),
                 child: Text(
-                  '결정된 메뉴는?',
+                  '관리자가 결정한 메뉴를 확인하세요',
                   style: TextStyle(
                     color: textColor,
                     fontSize: 34,
@@ -113,44 +103,46 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                   builder: (context, snapshot) {
                     final state = snapshot.data;
 
-                  // 로딩 중에도 테스트/실사용 모두에서 화면이 즉시 그려지도록
-                  // 애니메이션 대신 정적인 placeholder를 사용합니다.
-                  if (snapshot.connectionState != ConnectionState.done || state == null) {
-                    return Column(
-                      children: [
-                        _ValueBox(
-                          value: '불러오는 중입니다',
-                          borderColor: borderColor,
-                          hintColor: hintColor,
-                          height: 72,
-                        ),
-                        const SizedBox(height: 24),
-                        _ValueBox(
-                          value: '불러오는 중입니다',
-                          borderColor: borderColor,
-                          hintColor: hintColor,
-                          height: 260,
-                        ),
-                      ],
-                    );
-                  }
+                    // 로딩 중에도 테스트/실사용 모두에서 화면이 즉시 그려지도록
+                    // 애니메이션 대신 정적인 placeholder를 사용합니다.
+                    if (snapshot.connectionState != ConnectionState.done || state == null) {
+                      return Column(
+                        children: [
+                          _ValueBox(
+                            value: '불러오는 중입니다',
+                            borderColor: borderColor,
+                            hintColor: hintColor,
+                            height: 72,
+                          ),
+                          const SizedBox(height: 24),
+                          _ValueBox(
+                            value: '불러오는 중입니다',
+                            borderColor: borderColor,
+                            hintColor: hintColor,
+                            height: 260,
+                          ),
+                        ],
+                      );
+                    }
 
-                  String menuText;
-                  String reasonText;
+                    String menuText;
+                    String reasonText;
+                    bool showEnjoyMessage = false;
 
-                  if (state.kind == _LatestStateKind.deciding) {
-                    menuText = '관리자가 결정 중입니다';
-                    reasonText = '관리자가 결정 중입니다';
-                  } else if (state.kind == _LatestStateKind.error) {
-                    menuText = state.message ?? '서버 오류가 발생했습니다.';
-                    reasonText = state.message ?? '서버 오류가 발생했습니다.';
-                  } else {
-                    final latest = state.result;
-                    menuText = latest == null ? '결정메뉴가 아직 나오지 않았어요' : latest.recommendedMenu;
-                    reasonText = latest == null
-                        ? '결정메뉴가 아직 나오지 않았어요'
-                        : '원한 메뉴: ${latest.menuName}\n이유: ${latest.reason}';
-                  }
+                    if (state.kind == _LatestStateKind.deciding) {
+                      menuText = '관리자가 결정 중입니다';
+                      reasonText = '관리자가 결정 중입니다';
+                    } else if (state.kind == _LatestStateKind.error) {
+                      menuText = state.message ?? '서버 오류가 발생했습니다.';
+                      reasonText = state.message ?? '서버 오류가 발생했습니다.';
+                    } else {
+                      final latest = state.result;
+                      menuText = latest == null ? '결정메뉴가 아직 나오지 않았어요' : latest.recommendedMenu;
+                      reasonText = latest == null
+                          ? '결정메뉴가 아직 나오지 않았어요'
+                          : '원한 메뉴: ${latest.menuName}\n이유: ${latest.reason}';
+                      showEnjoyMessage = latest != null;
+                    }
 
                     return Column(
                       children: [
@@ -160,6 +152,17 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                           hintColor: hintColor,
                           height: 72,
                         ),
+                        if (showEnjoyMessage) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            '맛있게 드십시오!',
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         _ValueBox(
                           value: reasonText,
@@ -173,32 +176,6 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
                 ),
               ),
               const SizedBox(height: 28),
-              EntranceFadeSlide(
-                delay: const Duration(milliseconds: 260),
-                fromYOffset: 14,
-                duration: const Duration(milliseconds: 560),
-                child: _PrimaryButton(
-                  label: '맛있게 드십시오!',
-                  backgroundColor: const Color(0xFF0B18F1),
-                  textColor: Colors.white,
-                  // 서버 메뉴가 아직 공개되지 않았거나(결정 중),
-                  // 네트워크 오류가 발생한 경우에도 사용자가 다시 시도할 수 있도록
-                  // 버튼을 새로고침으로 동작시킵니다.
-                  onTap: _reload,
-                ),
-              ),
-              const SizedBox(height: 20),
-              EntranceFadeSlide(
-                delay: const Duration(milliseconds: 300),
-                fromYOffset: 14,
-                duration: const Duration(milliseconds: 560),
-                child: _PrimaryButton(
-                  label: 'AI에게 추천받기',
-                  backgroundColor: isDark ? const Color(0xFFB6B8F3) : const Color(0xFFB6B8F3),
-                  textColor: Colors.white,
-                  onTap: () {},
-                ),
-              ),
             ],
           ),
         ),
@@ -207,33 +184,6 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
   }
 }
 
-class _MenuButton extends StatelessWidget {
-  const _MenuButton({required this.onTap, required this.color});
-
-  final VoidCallback onTap;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color, width: 1),
-        ),
-        child: Icon(
-          Icons.menu_rounded,
-          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
-          size: 34,
-        ),
-      ),
-    );
-  }
-}
 
 class _ValueBox extends StatelessWidget {
   const _ValueBox({
