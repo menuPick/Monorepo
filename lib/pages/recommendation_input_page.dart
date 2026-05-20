@@ -182,7 +182,7 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
                       ? () {}
                       : () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('현재는 "메뉴를 올려봅시다." 버튼으로 서버에 저장합니다.')),
+                            const SnackBar(content: Text('식단 데이터가 아직 부족합니다.')),
                           );
                         },
                 ),
