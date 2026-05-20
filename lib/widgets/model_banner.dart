@@ -33,7 +33,7 @@ class ModelBanner extends StatelessWidget {
     }
 
     final assetSrc = kIsWeb
-        ? 'assets/assets/3d/cute_cat.glb'
+        ? Uri.base.resolve('assets/assets/3d/cute_cat.glb').toString()
         : 'assets/3d/cute_cat.glb';
 
     return SizedBox(
