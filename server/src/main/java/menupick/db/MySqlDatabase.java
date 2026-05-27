@@ -413,6 +413,17 @@ public final class MySqlDatabase implements DatabaseRepository {
             statement.execute(inquiriesSql);
             statement.execute(decisionSql);
             statement.execute(monthlyLimitSql);
+            try {
+                statement.execute(
+                        "ALTER TABLE recommendation_monthly_limits " +
+                                "ADD UNIQUE KEY uniq_user_month (user_key, month_key)"
+                );
+            } catch (SQLException ex) {
+                // Ignore if the unique key already exists.
+                if (!"42S21".equals(ex.getSQLState()) && ex.getErrorCode() != 1061) {
+                    throw ex;
+                }
+            }
         }
     }
 }
