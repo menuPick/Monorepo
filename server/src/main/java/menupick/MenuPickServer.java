@@ -651,12 +651,45 @@ public final class MenuPickServer {
                 sendNoContent(exchange);
                 return;
             }
-            if (!isGet(exchange)) {
-                sendMethodNotAllowed(exchange, "GET, OPTIONS");
-                return;
-            }
             if (!isAdminAuthorized(exchange)) {
                 sendJson(exchange, 401, error("unauthorized", "Admin token is missing or expired."));
+                return;
+            }
+
+            if (isPost(exchange) || isDelete(exchange)) {
+                try {
+                    List<Long> ids;
+                    if (isDelete(exchange)) {
+                        ids = parseIdsFromQuery(exchange);
+                        if (ids.isEmpty()) {
+                            ids = parseIdsFromBody(readBody(exchange));
+                        }
+                    } else {
+                        ids = parseIdsFromBody(readBody(exchange));
+                    }
+                    if (ids.isEmpty()) {
+                        sendJson(exchange, 400, error("validation_error", "ids is required"));
+                        return;
+                    }
+
+                    int deleted = database.deleteInquiries(ids);
+                    sendJson(exchange, 200, Map.of(
+                            "status", "ok",
+                            "requested", ids.size(),
+                            "deleted", deleted
+                    ));
+                } catch (RequestTooLargeException ex) {
+                    sendJson(exchange, 413, error("request_too_large", ex.getMessage()));
+                } catch (IllegalArgumentException ex) {
+                    sendJson(exchange, 400, error("invalid_request", ex.getMessage()));
+                } catch (IOException ex) {
+                    sendJson(exchange, 500, error("db_error", "Database operation failed."));
+                }
+                return;
+            }
+
+            if (!isGet(exchange)) {
+                sendMethodNotAllowed(exchange, "GET, POST, DELETE, OPTIONS");
                 return;
             }
 

@@ -149,6 +149,36 @@ class AdminApi {
     return (body['deleted'] as num?)?.toInt() ?? 0;
   }
 
+  /// 선택한 문의 항목들을 삭제합니다.
+  ///
+  /// 서버: POST /api/admin/inquiries
+  /// body: {"ids":[1,2,3]}
+  Future<int> deleteInquiries({required String token, required List<int> ids}) async {
+    if (ids.isEmpty) return 0;
+
+    final response = await http.post(
+      _uri('/api/admin/inquiries'),
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'ids': ids}),
+    );
+
+    final body = _decodeJson(response);
+    if (response.statusCode == 401) {
+      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+    }
+    if (response.statusCode == 405) {
+      throw AdminApiException('서버가 삭제 기능(POST/DELETE)을 지원하지 않습니다. 서버를 업데이트/재시작한 뒤 다시 시도해주세요.');
+    }
+    if (response.statusCode != 200) {
+      throw AdminApiException(body['message']?.toString() ?? '삭제 실패');
+    }
+
+    return (body['deleted'] as num?)?.toInt() ?? 0;
+  }
+
   Map<String, dynamic> _decodeJson(http.Response response) {
     try {
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));

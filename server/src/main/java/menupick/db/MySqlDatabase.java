@@ -339,6 +339,29 @@ public final class MySqlDatabase implements DatabaseRepository {
     }
 
     @Override
+    public synchronized int deleteInquiries(List<Long> ids) throws IOException {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+
+        StringJoiner joiner = new StringJoiner(",");
+        for (int i = 0; i < ids.size(); i++) {
+            joiner.add("?");
+        }
+        String placeholders = joiner.toString();
+
+        String deleteSql = "DELETE FROM inquiries WHERE id IN (" + placeholders + ")";
+        try (PreparedStatement statement = connection.prepareStatement(deleteSql)) {
+            for (int i = 0; i < ids.size(); i++) {
+                statement.setLong(i + 1, ids.get(i));
+            }
+            return statement.executeUpdate();
+        } catch (SQLException ex) {
+            throw new IOException("문의 삭제 실패", ex);
+        }
+    }
+
+    @Override
     public synchronized void close() throws IOException {
         try {
             connection.close();

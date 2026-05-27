@@ -490,11 +490,104 @@ class _InquiriesPage extends StatefulWidget {
 
 class _InquiriesPageState extends State<_InquiriesPage> {
   late Future<List<InquiryItem>> _future;
+  final Set<int> _selectedIds = <int>{};
+  bool _isDeleting = false;
 
   @override
   void initState() {
     super.initState();
     _future = widget.api.fetchInquiries(token: widget.session.token);
+  }
+
+  void _toggleSelected(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll(List<InquiryItem> items) {
+    setState(() {
+      _selectedIds
+        ..clear()
+        ..addAll(items.map((e) => e.id));
+    });
+  }
+
+  void _clearSelection() {
+    setState(_selectedIds.clear);
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _selectedIds.clear();
+      _future = widget.api.fetchInquiries(token: widget.session.token);
+    });
+    await _future;
+  }
+
+  Future<void> _confirmAndDeleteSelected() async {
+    if (_isDeleting) return;
+    final ids = _selectedIds.toList(growable: false);
+    if (ids.isEmpty) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('삭제 확인'),
+          content: Text('${ids.length}개 문의를 삭제할까요?\n(삭제하면 복구할 수 없습니다.)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('삭제'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    setState(() => _isDeleting = true);
+
+    try {
+      final deleted = await widget.api.deleteInquiries(
+        token: widget.session.token,
+        ids: ids,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 완료: $deleted개')),
+      );
+      setState(() {
+        _selectedIds.clear();
+        _future = widget.api.fetchInquiries(token: widget.session.token);
+      });
+      await _future;
+    } catch (e) {
+      if (e is AdminUnauthorizedException) {
+        await widget.onUnauthorized();
+        return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 실패: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 
   @override
@@ -523,27 +616,130 @@ class _InquiriesPageState extends State<_InquiriesPage> {
           return const Center(child: Text('문의 데이터가 없습니다.'));
         }
 
+        final allSelected = _selectedIds.isNotEmpty && _selectedIds.length == items.length;
+        final selectionText = _selectedIds.isEmpty
+            ? '항목을 선택(체크)해서 삭제할 수 있어요.'
+            : '${_selectedIds.length}개 선택됨';
+
         return RefreshIndicator(
-          onRefresh: () async {
-            setState(() {
-              _future = widget.api.fetchInquiries(token: widget.session.token);
-            });
-            await _future;
-          },
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Card(
-                child: ListTile(
-                  title: Text('문의 #${item.id}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text('${item.message}\n시간: ${item.createdAt.toLocal()}'),
-                  isThreeLine: true,
+          onRefresh: _refresh,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 520;
+
+                        final selectAllButton = TextButton(
+                          onPressed: _isDeleting
+                              ? null
+                              : () {
+                                  if (allSelected) {
+                                    _clearSelection();
+                                  } else {
+                                    _selectAll(items);
+                                  }
+                                },
+                          child: Text(allSelected ? '전체 해제' : '전체 선택'),
+                        );
+
+                        final deleteButton = FilledButton.tonalIcon(
+                          onPressed: (_selectedIds.isEmpty || _isDeleting)
+                              ? null
+                              : _confirmAndDeleteSelected,
+                          icon: _isDeleting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.delete),
+                          label: const Text('삭제'),
+                        );
+
+                        if (isNarrow) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectionText,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  selectAllButton,
+                                  deleteButton,
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                selectionText,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            selectAllButton,
+                            const SizedBox(width: 8),
+                            deleteButton,
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              );
-            },
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final item = items[index];
+                      final isSelected = _selectedIds.contains(item.id);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              selected: isSelected,
+                              leading: Checkbox(
+                                value: isSelected,
+                                onChanged: _isDeleting ? null : (_) => _toggleSelected(item.id),
+                              ),
+                              title: Text(
+                                '문의 #${item.id}',
+                                style: const TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                              subtitle: Text('${item.message}\n시간: ${item.createdAt.toLocal()}'),
+                              isThreeLine: true,
+                              onTap: _isDeleting ? null : () => _toggleSelected(item.id),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: items.length,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },

@@ -32,14 +32,13 @@ public interface DatabaseRepository {
 
     List<RecommendationRecord> listRecommendations(int limit) throws IOException;
 
-    /**
-     * 추천을 id 기준으로 삭제합니다.
-     *
-     * @return 실제로 삭제된 recommendations 행 개수
-     */
+
     int deleteRecommendations(List<Long> ids) throws IOException;
 
     List<InquiryRecord> listInquiries(int limit) throws IOException;
+
+
+    int deleteInquiries(List<Long> ids) throws IOException;
 
     default void close() throws IOException {
         // no-op

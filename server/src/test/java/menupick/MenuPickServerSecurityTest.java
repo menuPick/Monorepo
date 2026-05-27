@@ -210,6 +210,13 @@ public final class MenuPickServerSecurityTest {
         }
 
         @Override
+        public int deleteInquiries(List<Long> ids) {
+            int before = inquiries.size();
+            inquiries.removeIf(record -> ids.contains(record.id()));
+            return before - inquiries.size();
+        }
+
+        @Override
         public void close() throws IOException {
         }
     }
