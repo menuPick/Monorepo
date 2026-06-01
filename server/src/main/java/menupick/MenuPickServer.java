@@ -836,7 +836,7 @@ public final class MenuPickServer {
     private static Set<String> loadAllowedCorsOrigins() {
         String raw = System.getenv("CORS_ALLOWED_ORIGINS");
         if (raw == null || raw.isBlank()) {
-            return Set.of("http://localhost:*");
+            return Set.of("http://localhost:*", "https://menupick.github.io");
         }
         Set<String> origins = new HashSet<>();
         for (String part : raw.split(",")) {
