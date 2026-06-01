@@ -4,6 +4,10 @@ import '../admin_theme_controller.dart';
 import '../models/admin_models.dart';
 import '../services/admin_api.dart';
 import '../services/admin_session_store.dart';
+import 'package:excel/excel.dart';
+
+import '../utils/category_classifier.dart';
+import '../utils/file_download.dart';
 
 const String kAdminApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -155,6 +159,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
   late Future<List<RecommendationItem>> _future;
   final Set<int> _selectedIds = <int>{};
   bool _isDeleting = false;
+  String _selectedCategory = '전체';
 
   @override
   void initState() {
@@ -190,6 +195,66 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
       _future = widget.api.fetchRecommendations(token: widget.session.token);
     });
     await _future;
+  }
+
+  List<String> _categoryOptions() {
+    return ['전체', ...CategoryClassifier.categoryOrder];
+  }
+
+  String _categoryForItem(RecommendationItem item) {
+    return CategoryClassifier.classify(item.menuName, item.recommendedMenu);
+  }
+
+  Future<void> _exportXlsx(List<RecommendationItem> items) async {
+    final excel = Excel.createExcel();
+    final sheet = excel['추천목록'];
+    sheet.appendRow(['추천ID', '원한메뉴', '추천메뉴', '이유', '카테고리', '작성시간']);
+    for (final item in items) {
+      sheet.appendRow([
+        item.id,
+        item.menuName,
+        item.recommendedMenu,
+        item.reason,
+        _categoryForItem(item),
+        item.createdAt.toLocal().toString(),
+      ]);
+    }
+
+    final categorySheet = excel['카테고리목록'];
+    categorySheet.appendRow(['카테고리', '개수']);
+    final counts = CategoryClassifier.summarize(items);
+    for (final category in CategoryClassifier.categoryOrder) {
+      categorySheet.appendRow([category, counts[category] ?? 0]);
+    }
+
+    excel.delete('Sheet1');
+    final bytes = excel.encode();
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('엑셀 생성에 실패했습니다.')),
+        );
+      }
+      return;
+    }
+
+    final now = DateTime.now();
+    final filename =
+        "추천목록_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.xlsx";
+
+    try {
+      await downloadBytes(
+        filename: filename,
+        bytes: bytes,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('다운로드 실패: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmAndDeleteSelected({required List<RecommendationItem> items}) async {
@@ -279,7 +344,12 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
           return const Center(child: Text('추천 데이터가 없습니다.'));
         }
 
-        final allSelected = _selectedIds.isNotEmpty && _selectedIds.length == items.length;
+        final categoryOptions = _categoryOptions();
+        final filteredItems = _selectedCategory == '전체'
+            ? items
+            : items.where((item) => _categoryForItem(item) == _selectedCategory).toList();
+
+        final allSelected = _selectedIds.isNotEmpty && _selectedIds.length == filteredItems.length;
         final selectionText = _selectedIds.isEmpty
             ? '항목을 선택(체크)해서 삭제할 수 있어요.'
             : '${_selectedIds.length}개 선택됨';
@@ -309,16 +379,41 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                   if (allSelected) {
                                     _clearSelection();
                                   } else {
-                                    _selectAll(items);
+                                    _selectAll(filteredItems);
                                   }
                                 },
                           child: Text(allSelected ? '전체 해제' : '전체 선택'),
                         );
 
+                        final categoryDropdown = DropdownButton<String>(
+                          value: _selectedCategory,
+                          items: categoryOptions
+                              .map(
+                                (category) => DropdownMenuItem(
+                                  value: category,
+                                  child: Text(category),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _selectedCategory = value;
+                              _selectedIds.clear();
+                            });
+                          },
+                        );
+
+                        final exportButton = FilledButton.tonalIcon(
+                          onPressed: filteredItems.isEmpty ? null : () => _exportXlsx(filteredItems),
+                          icon: const Icon(Icons.download),
+                          label: const Text('엑셀 다운로드'),
+                        );
+
                         final deleteButton = FilledButton.tonalIcon(
                           onPressed: (_selectedIds.isEmpty || _isDeleting)
                               ? null
-                              : () => _confirmAndDeleteSelected(items: items),
+                              : () => _confirmAndDeleteSelected(items: filteredItems),
                           icon: _isDeleting
                               ? const SizedBox(
                                   width: 18,
@@ -342,6 +437,8 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
+                                  categoryDropdown,
+                                  exportButton,
                                   selectAllButton,
                                   deleteButton,
                                 ],
@@ -358,6 +455,10 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                 style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
                             ),
+                            categoryDropdown,
+                            const SizedBox(width: 8),
+                            exportButton,
+                            const SizedBox(width: 8),
                             selectAllButton,
                             const SizedBox(width: 8),
                             deleteButton,
@@ -373,8 +474,9 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final item = items[index];
+                      final item = filteredItems[index];
                       final isSelected = _selectedIds.contains(item.id);
+                      final category = _categoryForItem(item);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Card(
@@ -391,6 +493,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                 style: const TextStyle(fontWeight: FontWeight.w800),
                               ),
                               subtitle: Text(
+                                '카테고리: $category\n'
                                 '원한 메뉴: ${item.menuName}\n이유: ${item.reason}\n시간: ${item.createdAt.toLocal()}',
                               ),
                               isThreeLine: true,
@@ -465,7 +568,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                         ),
                       );
                     },
-                    childCount: items.length,
+                    childCount: filteredItems.length,
                   ),
                 ),
               ),
@@ -655,7 +758,7 @@ class _InquiriesPageState extends State<_InquiriesPage> {
                         final deleteButton = FilledButton.tonalIcon(
                           onPressed: (_selectedIds.isEmpty || _isDeleting)
                               ? null
-                              : _confirmAndDeleteSelected,
+                              : () => _confirmAndDeleteSelected(items: items),
                           icon: _isDeleting
                               ? const SizedBox(
                                   width: 18,
@@ -746,4 +849,3 @@ class _InquiriesPageState extends State<_InquiriesPage> {
     );
   }
 }
-
