@@ -208,23 +208,36 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
   Future<void> _exportXlsx(List<RecommendationItem> items) async {
     final excel = Excel.createExcel();
     final sheet = excel['추천목록'];
-    sheet.appendRow(['추천ID', '원한메뉴', '추천메뉴', '이유', '카테고리', '작성시간']);
+    sheet.appendRow([
+      TextCellValue('추천ID'),
+      TextCellValue('원한메뉴'),
+      TextCellValue('추천메뉴'),
+      TextCellValue('이유'),
+      TextCellValue('카테고리'),
+      TextCellValue('작성시간'),
+    ]);
     for (final item in items) {
       sheet.appendRow([
-        item.id,
-        item.menuName,
-        item.recommendedMenu,
-        item.reason,
-        _categoryForItem(item),
-        item.createdAt.toLocal().toString(),
+        IntCellValue(item.id),
+        TextCellValue(item.menuName),
+        TextCellValue(item.recommendedMenu),
+        TextCellValue(item.reason),
+        TextCellValue(_categoryForItem(item)),
+        TextCellValue(item.createdAt.toLocal().toString()),
       ]);
     }
 
     final categorySheet = excel['카테고리목록'];
-    categorySheet.appendRow(['카테고리', '개수']);
+    categorySheet.appendRow([
+      TextCellValue('카테고리'),
+      TextCellValue('개수'),
+    ]);
     final counts = CategoryClassifier.summarize(items);
     for (final category in CategoryClassifier.categoryOrder) {
-      categorySheet.appendRow([category, counts[category] ?? 0]);
+      categorySheet.appendRow([
+        TextCellValue(category),
+        IntCellValue(counts[category] ?? 0),
+      ]);
     }
 
     excel.delete('Sheet1');
@@ -758,7 +771,7 @@ class _InquiriesPageState extends State<_InquiriesPage> {
                         final deleteButton = FilledButton.tonalIcon(
                           onPressed: (_selectedIds.isEmpty || _isDeleting)
                               ? null
-                              : () => _confirmAndDeleteSelected(items: items),
+                              : () => _confirmAndDeleteSelected(),
                           icon: _isDeleting
                               ? const SizedBox(
                                   width: 18,
