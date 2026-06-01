@@ -27,7 +27,7 @@ jobs:
         run: chmod +x scripts/*.sh
       - name: Build USER (root)
         env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162:8080' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
@@ -44,7 +44,7 @@ jobs:
           cp site/index.html site/404.html
       - name: Build ADMIN (/admin)
         env:
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162:8080' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
