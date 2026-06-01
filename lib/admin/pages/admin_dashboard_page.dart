@@ -11,7 +11,7 @@ import '../utils/file_download.dart';
 
 const String kAdminApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:8080',
+  defaultValue: 'http://54.116.164.162:8080',
 );
 
 class AdminDashboardPage extends StatefulWidget {
