@@ -37,7 +37,7 @@ jobs:
 
       - name: Build USER (root)
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://54.116.164.162' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
@@ -59,7 +59,7 @@ jobs:
 
       - name: Build ADMIN (/admin)
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'https://54.116.164.162' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
