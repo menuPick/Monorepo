@@ -1,66 +1,87 @@
 name: Deploy GitHub Pages
+
 on:
   push:
     branches: ["main"]
   workflow_dispatch:
+
 permissions:
   contents: write
+
 concurrency:
   group: "gh-pages"
   cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+
       - name: Enable web
         run: flutter config --enable-web
+
       - name: Install dependencies
         run: flutter pub get
+
       - name: Make scripts executable
         run: chmod +x scripts/*.sh
+
       - name: Build USER (root)
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162:8080' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
+
           if [[ "${REPO_NAME}" == "${OWNER}.github.io" ]]; then
             export BASE_HREF="/"
           else
             export BASE_HREF="/${REPO_NAME}/"
           fi
+
           echo "API_BASE_URL is: ${API_BASE_URL}"
+
           ./scripts/build_user_web.sh
+
           mkdir -p site
           cp -R build/web/. site/
           cp site/index.html site/404.html
+
       - name: Build ADMIN (/admin)
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162:8080' }}
+          API_BASE_URL: ${{ vars.API_BASE_URL || 'http://54.116.164.162' }}
         run: |
           set -euo pipefail
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
+
           if [[ "${REPO_NAME}" == "${OWNER}.github.io" ]]; then
             export BASE_HREF="/admin/"
           else
             export BASE_HREF="/${REPO_NAME}/admin/"
           fi
+
           echo "API_BASE_URL is: ${API_BASE_URL}"
+
           ./scripts/build_admin_web.sh
+
           mkdir -p site/admin
           cp -R build/web/. site/admin/
           cp site/admin/index.html site/admin/404.html
+
       - name: Disable Jekyll
         run: touch site/.nojekyll
+
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
