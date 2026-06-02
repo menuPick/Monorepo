@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// flutter run --dart-define=API_BASE_URL=http://localhost:8080
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://54.116.164.162',
+  defaultValue: 'http://54.116.164.162:8080',
 );
 
 /// 위젯 테스트에서는 실제 네트워크 호출이 불필요하고,
@@ -58,14 +57,6 @@ class UserApi {
 
     // trailing slash 제거
     value = value.replaceAll(RegExp(r'/*$'), '');
-
-    // HTTPS 웹 배포 환경에서 http:// API URL을 자동 승격 (Mixed Content 방지)
-    if (kIsWeb &&
-        Uri.base.scheme == 'https' &&
-        value.toLowerCase().startsWith('http://')) {
-      value = 'https://${value.substring(7)}';
-    }
-
     return value;
   }
 
