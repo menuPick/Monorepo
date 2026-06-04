@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://54.116.164.162',
+  defaultValue: 'https://api.54.116.164.162.nip.io',
 );
 
 /// 위젯 테스트에서는 실제 네트워크 호출이 불필요하고,

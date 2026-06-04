@@ -40,7 +40,7 @@ jobs:
       - name: Build USER (root)
         run: |
           set -euo pipefail
-          export API_BASE_URL="${API_BASE_URL:-http://54.116.164.162}"
+          export API_BASE_URL="${API_BASE_URL:-https://api.54.116.164.162.nip.io}"
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
 
@@ -61,7 +61,7 @@ jobs:
       - name: Build ADMIN (/admin)
         run: |
           set -euo pipefail
-          export API_BASE_URL="${API_BASE_URL:-http://54.116.164.162}"
+          export API_BASE_URL="${API_BASE_URL:-https://api.54.116.164.162.nip.io}"
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
 
