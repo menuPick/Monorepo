@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import '../models/admin_models.dart';
@@ -11,9 +12,19 @@ class AdminApi {
   final String baseUrl;
 
   static String normalizeBaseUrl(String raw) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return trimmed;
-    return trimmed.endsWith('/') ? trimmed.substring(0, trimmed.length - 1) : trimmed;
+    var value = raw.trim();
+    if (value.isEmpty) return value;
+    value = value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+    if (kIsWeb &&
+        Uri.base.scheme == 'https' &&
+        value.toLowerCase().startsWith('http://')) {
+      value = 'https://${value.substring(7)}';
+    }
+    final host = Uri.tryParse(value)?.host?.toLowerCase();
+    if (host == '54.116.164.162') {
+      value = 'https://api.54.116.164.162.nip.io';
+    }
+    return value;
   }
 
   Uri _uri(String path, [Map<String, String>? query]) {

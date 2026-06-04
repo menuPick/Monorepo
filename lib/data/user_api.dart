@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -56,6 +57,20 @@ class UserApi {
 
     // trailing slash 제거
     value = value.replaceAll(RegExp(r'/*$'), '');
+
+    // GitHub Pages(HTTPS) 등에서 http:// API가 빌드에 박혀도 Mixed Content 방지
+    if (kIsWeb &&
+        Uri.base.scheme == 'https' &&
+        value.toLowerCase().startsWith('http://')) {
+      value = 'https://${value.substring(7)}';
+    }
+
+    // 구 IP 주소(http://54.116.164.162) 빌드 → nip.io HTTPS API로 보정
+    final host = Uri.tryParse(value)?.host?.toLowerCase();
+    if (host == '54.116.164.162') {
+      value = 'https://api.54.116.164.162.nip.io';
+    }
+
     return value;
   }
 

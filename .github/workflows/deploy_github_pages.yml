@@ -41,6 +41,9 @@ jobs:
         run: |
           set -euo pipefail
           export API_BASE_URL="${API_BASE_URL:-https://api.54.116.164.162.nip.io}"
+          if [[ "$API_BASE_URL" == *54.116.164.162* && "$API_BASE_URL" != *nip.io* ]]; then
+            export API_BASE_URL="https://api.54.116.164.162.nip.io"
+          fi
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
 
@@ -62,6 +65,9 @@ jobs:
         run: |
           set -euo pipefail
           export API_BASE_URL="${API_BASE_URL:-https://api.54.116.164.162.nip.io}"
+          if [[ "$API_BASE_URL" == *54.116.164.162* && "$API_BASE_URL" != *nip.io* ]]; then
+            export API_BASE_URL="https://api.54.116.164.162.nip.io"
+          fi
           OWNER='${{ github.repository_owner }}'
           REPO_NAME='${{ github.event.repository.name }}'
 
