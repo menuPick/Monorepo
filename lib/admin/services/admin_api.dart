@@ -7,7 +7,7 @@ import '../models/admin_models.dart';
 class AdminApi {
   AdminApi({required this.baseUrl});
 
-  /// 예) http://localhost:8080
+  /// 예) http://localhost
   final String baseUrl;
 
   static String normalizeBaseUrl(String raw) {
@@ -203,4 +203,3 @@ class AdminApiException implements Exception {
 class AdminUnauthorizedException extends AdminApiException {
   AdminUnauthorizedException(super.message);
 }
-

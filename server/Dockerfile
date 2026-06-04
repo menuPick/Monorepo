@@ -18,7 +18,5 @@ COPY --from=build /workspace/target/menu-pick-server-*.jar /app/menu-pick-server
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-EXPOSE 8080
+EXPOSE 80
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-
-

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-PORT="${PORT:-8080}"
+PORT="${PORT:-80}"
 DB_URL="${DB_URL:-}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-}"

@@ -7,7 +7,7 @@ set -euo pipefail
 # export DB_PASSWORD='YOUR_PASSWORD'
 # export ADMIN_ID_HASH_FILE='secrets/admin_id_hash.txt'
 
-PORT=${PORT:-8080}
+PORT=${PORT:-80}
 DB_URL=${DB_URL:-"jdbc:mysql://localhost:3306/menupick?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true"}
 DB_USER=${DB_USER:-root}
 DB_PASSWORD=${DB_PASSWORD:-}

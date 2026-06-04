@@ -5,7 +5,7 @@ import '../services/admin_session_store.dart';
 
 const String kAdminApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:8080',
+  defaultValue: 'http://54.116.164.162',
 );
 
 class AdminLoginPage extends StatefulWidget {

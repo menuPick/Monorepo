@@ -47,7 +47,7 @@ class _RecommendationResultPageState extends State<RecommendationResultPage> {
         '서버에 연결할 수 없습니다.\n\n'
         '1) 서버가 실행 중인지 확인하세요.\n'
         '2) 웹 실행 시 API_BASE_URL이 올바른지 확인하세요.\n'
-        '   예) flutter run --dart-define=API_BASE_URL=http://localhost:8080'
+        '   예) flutter run --dart-define=API_BASE_URL=http://localhost'
       );
     }
   }

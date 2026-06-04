@@ -5,11 +5,10 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 빌드/실행 시 아래처럼 서버 주소를 바꿀 수 있습니다.
-/// flutter run --dart-define=API_BASE_URL=http://localhost:8080
+
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://54.116.164.162:8080',
+  defaultValue: 'http://54.116.164.162',
 );
 
 /// 위젯 테스트에서는 실제 네트워크 호출이 불필요하고,
