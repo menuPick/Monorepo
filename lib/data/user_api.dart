@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -18,19 +15,18 @@ const bool kIsFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
 
 class UserApi {
   UserApi({http.Client? client, String? baseUrl})
-      : _client = client ?? http.Client(),
-        baseUrl = _normalizeBaseUrl(baseUrl ?? kApiBaseUrl);
+    : _client = client ?? http.Client(),
+      baseUrl = _normalizeBaseUrl(baseUrl ?? kApiBaseUrl);
 
   final http.Client _client;
   final String baseUrl;
-  static const _kAnonymousUserId = 'anonymous_recommendation_user_id';
 
   Uri _uri(String path, [Map<String, String>? query]) {
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
     // baseUrl 뒤에 / 를 강제해서 resolve가 안정적으로 동작하도록 합니다.
-    return Uri.parse('$baseUrl/')
-        .resolve(normalizedPath)
-        .replace(queryParameters: query);
+    return Uri.parse(
+      '$baseUrl/',
+    ).resolve(normalizedPath).replace(queryParameters: query);
   }
 
   static String _normalizeBaseUrl(String raw) {
@@ -46,10 +42,12 @@ class UserApi {
     }
 
     final lower = value.toLowerCase();
-    final hasScheme = lower.startsWith('http://') || lower.startsWith('https://');
+    final hasScheme =
+        lower.startsWith('http://') || lower.startsWith('https://');
     if (!hasScheme) {
       // 스킴이 없으면 개발 환경(로컬호스트/IP)은 http, 그 외는 https로 보정합니다.
-      final isLocal = lower.contains('localhost') ||
+      final isLocal =
+          lower.contains('localhost') ||
           lower.startsWith('127.0.0.1') ||
           RegExp(r'^\d+\.\d+\.\d+\.\d+').hasMatch(lower);
       value = '${isLocal ? 'http' : 'https'}://$value';
@@ -66,7 +64,7 @@ class UserApi {
     }
 
     // 구 IP 주소(http://54.116.164.162) 빌드 → nip.io HTTPS API로 보정
-    final host = Uri.tryParse(value)?.host?.toLowerCase();
+    final host = Uri.tryParse(value)?.host.toLowerCase();
     if (host == '54.116.164.162') {
       value = 'https://api.54.116.164.162.nip.io';
     }
@@ -78,14 +76,10 @@ class UserApi {
     required String menuName,
     required String reason,
   }) async {
-    final userId = await _anonymousUserId();
     final response = await _client
         .post(
           _uri('/api/recommendations'),
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'X-MenuPick-User-Id': userId,
-          },
+          headers: const {'Content-Type': 'application/json; charset=utf-8'},
           body: jsonEncode({
             'menuName': menuName,
             'reason': reason,
@@ -96,7 +90,8 @@ class UserApi {
         .timeout(const Duration(seconds: 6));
 
     final body = _decodeJson(response);
-    if (response.statusCode == 429 && body['error']?.toString() == 'monthly_limit_exceeded') {
+    if (response.statusCode == 429 &&
+        body['error']?.toString() == 'monthly_limit_exceeded') {
       throw MonthlyRecommendationLimitException(
         body['message']?.toString() ?? '메뉴 추천은 한 달에 한 번만 올릴 수 있습니다.',
       );
@@ -116,7 +111,8 @@ class UserApi {
     final body = _decodeJson(response);
     // 결정메뉴가 아직 공개되지 않은 경우(또는 설정되지 않은 경우)
     // 사용자 화면에서는 기존 방식대로 placeholder를 보여주기 위해 null 처리합니다.
-    if (response.statusCode == 404 && body['error']?.toString() == 'not_published') {
+    if (response.statusCode == 404 &&
+        body['error']?.toString() == 'not_published') {
       throw NotPublishedException(body['publishAt']?.toString());
     }
     if (response.statusCode != 200) {
@@ -150,20 +146,6 @@ class UserApi {
     } catch (_) {
       return <String, dynamic>{'message': 'Invalid response'};
     }
-  }
-
-  Future<String> _anonymousUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_kAnonymousUserId);
-    if (saved != null && saved.isNotEmpty) {
-      return saved;
-    }
-
-    final random = Random.secure();
-    final bytes = List<int>.generate(24, (_) => random.nextInt(256));
-    final userId = base64UrlEncode(bytes).replaceAll('=', '');
-    await prefs.setString(_kAnonymousUserId, userId);
-    return userId;
   }
 }
 

@@ -20,7 +20,7 @@ class AdminApi {
         value.toLowerCase().startsWith('http://')) {
       value = 'https://${value.substring(7)}';
     }
-    final host = Uri.tryParse(value)?.host?.toLowerCase();
+    final host = Uri.tryParse(value)?.host.toLowerCase();
     if (host == '54.116.164.162') {
       value = 'https://api.54.116.164.162.nip.io';
     }
@@ -34,9 +34,7 @@ class AdminApi {
   Future<AdminSession> login({required String id}) async {
     final response = await http.post(
       _uri('/api/admin/login'),
-      headers: const {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
+      headers: const {'Content-Type': 'application/json; charset=utf-8'},
       body: jsonEncode({'id': id}),
     );
 
@@ -54,20 +52,27 @@ class AdminApi {
       throw AdminApiException('서버 응답이 올바르지 않습니다.');
     }
 
-    return AdminSession(token: token, expiresAt: expiresAt, adminEmail: adminEmail);
+    return AdminSession(
+      token: token,
+      expiresAt: expiresAt,
+      adminEmail: adminEmail,
+    );
   }
 
-  Future<List<RecommendationItem>> fetchRecommendations({required String token, int limit = 50}) async {
+  Future<List<RecommendationItem>> fetchRecommendations({
+    required String token,
+    int limit = 50,
+  }) async {
     final response = await http.get(
       _uri('/api/admin/recommendations', {'limit': '$limit'}),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     final body = _decodeJson(response);
     if (response.statusCode == 401) {
-      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+      throw AdminUnauthorizedException(
+        body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
     }
     if (response.statusCode != 200) {
       throw AdminApiException(body['message']?.toString() ?? '추천 목록 조회 실패');
@@ -80,17 +85,20 @@ class AdminApi {
         .toList(growable: false);
   }
 
-  Future<List<InquiryItem>> fetchInquiries({required String token, int limit = 50}) async {
+  Future<List<InquiryItem>> fetchInquiries({
+    required String token,
+    int limit = 50,
+  }) async {
     final response = await http.get(
       _uri('/api/admin/inquiries', {'limit': '$limit'}),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     final body = _decodeJson(response);
     if (response.statusCode == 401) {
-      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+      throw AdminUnauthorizedException(
+        body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
     }
     if (response.statusCode != 200) {
       throw AdminApiException(body['message']?.toString() ?? '문의 목록 조회 실패');
@@ -123,7 +131,9 @@ class AdminApi {
 
     final body = _decodeJson(response);
     if (response.statusCode == 401) {
-      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+      throw AdminUnauthorizedException(
+        body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
     }
     if (response.statusCode != 200) {
       throw AdminApiException(body['message']?.toString() ?? '결정 메뉴 설정 실패');
@@ -134,7 +144,10 @@ class AdminApi {
   ///
   /// 서버: POST /api/admin/recommendations
   /// body: {"ids":[1,2,3]}
-  Future<int> deleteRecommendations({required String token, required List<int> ids}) async {
+  Future<int> deleteRecommendations({
+    required String token,
+    required List<int> ids,
+  }) async {
     if (ids.isEmpty) return 0;
 
     final response = await http.post(
@@ -148,10 +161,14 @@ class AdminApi {
 
     final body = _decodeJson(response);
     if (response.statusCode == 401) {
-      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+      throw AdminUnauthorizedException(
+        body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
     }
     if (response.statusCode == 405) {
-      throw AdminApiException('서버가 삭제 기능(POST/DELETE)을 지원하지 않습니다. 서버를 업데이트/재시작한 뒤 다시 시도해주세요.');
+      throw AdminApiException(
+        '서버가 삭제 기능(POST/DELETE)을 지원하지 않습니다. 서버를 업데이트/재시작한 뒤 다시 시도해주세요.',
+      );
     }
     if (response.statusCode != 200) {
       throw AdminApiException(body['message']?.toString() ?? '삭제 실패');
@@ -164,7 +181,10 @@ class AdminApi {
   ///
   /// 서버: POST /api/admin/inquiries
   /// body: {"ids":[1,2,3]}
-  Future<int> deleteInquiries({required String token, required List<int> ids}) async {
+  Future<int> deleteInquiries({
+    required String token,
+    required List<int> ids,
+  }) async {
     if (ids.isEmpty) return 0;
 
     final response = await http.post(
@@ -178,10 +198,14 @@ class AdminApi {
 
     final body = _decodeJson(response);
     if (response.statusCode == 401) {
-      throw AdminUnauthorizedException(body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.');
+      throw AdminUnauthorizedException(
+        body['message']?.toString() ?? '세션이 만료되었습니다. 다시 로그인해주세요.',
+      );
     }
     if (response.statusCode == 405) {
-      throw AdminApiException('서버가 삭제 기능(POST/DELETE)을 지원하지 않습니다. 서버를 업데이트/재시작한 뒤 다시 시도해주세요.');
+      throw AdminApiException(
+        '서버가 삭제 기능(POST/DELETE)을 지원하지 않습니다. 서버를 업데이트/재시작한 뒤 다시 시도해주세요.',
+      );
     }
     if (response.statusCode != 200) {
       throw AdminApiException(body['message']?.toString() ?? '삭제 실패');

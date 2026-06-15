@@ -79,7 +79,7 @@ public final class MenuPickServerSecurityTest {
     }
 
     @Test
-    void limitsRecommendationsToOncePerUserPerMonth() throws Exception {
+    void limitsRecommendationsToOncePerNetworkPerMonthEvenWhenClientIdChanges() throws Exception {
         MenuPickServer server = new MenuPickServer(0, new InMemoryDatabase(), MenuPickServer.sha256Hex("security-admin"));
         server.start();
 
@@ -98,10 +98,35 @@ public final class MenuPickServerSecurityTest {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
             ).statusCode(), "second monthly recommendation");
 
-            assertStatus(201, client.send(
+            assertStatus(429, client.send(
                     request(port, "/api/recommendations", "POST", body, null, "other-monthly-user"),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            ).statusCode(), "different user monthly recommendation");
+            ).statusCode(), "rotated client id monthly recommendation");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rateLimitsPublicInquiryWrites() throws Exception {
+        MenuPickServer server = new MenuPickServer(0, new InMemoryDatabase(), MenuPickServer.sha256Hex("security-admin"));
+        server.start();
+
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            int port = server.getPort();
+            for (int i = 0; i < 5; i++) {
+                assertStatus(201, client.send(
+                        request(port, "/api/inquiries", "POST", "{\"message\":\"inquiry " + i + "\"}", null),
+                        HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+                ).statusCode(), "allowed inquiry " + i);
+            }
+            HttpResponse<String> limited = client.send(
+                    request(port, "/api/inquiries", "POST", "{\"message\":\"too many\"}", null),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+            assertStatus(429, limited.statusCode(), "inquiry rate limit");
+            assertEquals("600", limited.headers().firstValue("Retry-After").orElse(""), "retry after");
         } finally {
             server.stop(0);
         }

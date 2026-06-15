@@ -18,14 +18,37 @@ class AdminApp extends StatelessWidget {
           theme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.light,
-            colorSchemeSeed: const Color(0xFF0B18F1),
+            colorSchemeSeed: const Color(0xFF4F56D7),
+            scaffoldBackgroundColor: const Color(0xFFF6F7FB),
             fontFamily: 'Pretendard',
+            cardTheme: CardThemeData(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFFF7F8FC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,
-            colorSchemeSeed: const Color(0xFF0B18F1),
+            colorSchemeSeed: const Color(0xFF8D93FF),
+            scaffoldBackgroundColor: const Color(0xFF101116),
             fontFamily: 'Pretendard',
+            cardTheme: CardThemeData(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
           ),
           home: const AdminAuthGate(),
         );
@@ -33,4 +56,3 @@ class AdminApp extends StatelessWidget {
     );
   }
 }
-
