@@ -75,10 +75,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.scrollUntilVisible(
-      find.text('추천메뉴를 확인하세요!'),
-      200,
-    );
+    await tester.scrollUntilVisible(find.text('추천메뉴를 확인하세요!'), 200);
     await tester.tap(find.text('추천메뉴를 확인하세요!'));
     await tester.pumpAndSettle();
 
@@ -97,9 +94,7 @@ void main() {
     expect(find.text('junsumon090608@dgsw.hs.kr'), findsOneWidget);
   });
 
-  testWidgets('toggles dark mode from mode menu', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('toggles dark mode from mode menu', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
     await tester.tap(find.text('모드'));
@@ -118,7 +113,7 @@ void main() {
 
     TextField adminIdField = tester.widget<TextField>(find.byType(TextField));
     expect(adminIdField.obscureText, isTrue);
-    expect(find.text('<0>'), findsOneWidget);
+    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'secret-admin');
     await tester.tap(find.byTooltip('관리자 ID 보기'));
@@ -126,6 +121,6 @@ void main() {
 
     adminIdField = tester.widget<TextField>(find.byType(TextField));
     expect(adminIdField.obscureText, isFalse);
-    expect(find.text('<1>'), findsOneWidget);
+    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
   });
 }

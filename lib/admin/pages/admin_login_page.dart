@@ -99,7 +99,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                               : () {
                                   setState(() => _showAdminId = !_showAdminId);
                                 },
-                          icon: Text(_showAdminId ? '<1>' : '<0>'),
+                          icon: Icon(
+                            _showAdminId
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
                         ),
                       ),
                       onSubmitted: (_) => _login(),
