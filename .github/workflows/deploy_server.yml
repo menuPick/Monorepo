@@ -43,10 +43,37 @@ jobs:
         run: |
           set -euo pipefail
 
-          parameters="$(jq -n '{
+          deploy_command="$(cat <<'COMMAND'
+          sudo -iu ubuntu bash <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          cd /home/ubuntu/Monorepo
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            echo "Deployment aborted: EC2 checkout has uncommitted changes." >&2
+            exit 1
+          fi
+
+          git fetch origin main
+
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            backup="deploy-backup-$(date -u +%Y%m%dT%H%M%SZ)"
+            git branch "$backup" HEAD
+            echo "Saved diverged EC2 commits to $backup"
+          fi
+
+          git reset --hard origin/main
+          cd server
+          mvn -q test
+          mvn -q -DskipTests package
+          REMOTE_SCRIPT
+          COMMAND
+          )"
+
+          parameters="$(jq -n --arg deploy "$deploy_command" '{
             commands: [
               "set -euo pipefail",
-              "sudo -iu ubuntu bash -lc '\''set -euo pipefail; cd /home/ubuntu/Monorepo; if [ -n \"$(git status --porcelain)\" ]; then git status --short; echo \"Deployment aborted: EC2 checkout has uncommitted changes.\" >&2; exit 1; fi; git fetch origin main; if ! git merge-base --is-ancestor HEAD origin/main; then backup=\"deploy-backup-$(date -u +%Y%m%dT%H%M%SZ)\"; git branch \"$backup\" HEAD; echo \"Saved diverged EC2 commits to $backup\"; fi; git reset --hard origin/main; cd server; mvn -q test; mvn -q -DskipTests package'\''",
+              $deploy,
               "systemctl restart menupick",
               "systemctl is-active --quiet menupick",
               "curl --fail --silent --show-error http://localhost/health"
