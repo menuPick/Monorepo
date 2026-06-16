@@ -10,13 +10,25 @@ class RecommendationInputPage extends StatefulWidget {
   const RecommendationInputPage({super.key});
 
   @override
-  State<RecommendationInputPage> createState() => _RecommendationInputPageState();
+  State<RecommendationInputPage> createState() =>
+      _RecommendationInputPageState();
 }
 
 class _RecommendationInputPageState extends State<RecommendationInputPage> {
+  static const List<String> _categories = [
+    '주식',
+    '국/찌개',
+    '주찬(메인 반찬)',
+    '부찬(보조 반찬)',
+    '김치류',
+    '후식(디저트)',
+    '미분류',
+  ];
+
   final TextEditingController _menuNameController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
   bool _isSaving = false;
+  String _selectedCategory = '미분류';
 
   final UserApi _api = UserApi();
 
@@ -32,9 +44,9 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
     final reason = _reasonController.text.trim();
 
     if (menuName.isEmpty && reason.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('메뉴명 또는 이유를 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('메뉴명 또는 이유를 입력해주세요.')));
       return;
     }
 
@@ -47,23 +59,24 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
       await _api.submitRecommendation(
         menuName: menuName.isEmpty ? '메뉴명 미입력' : menuName,
         reason: reason.isEmpty ? '이유 미입력' : reason,
+        category: _selectedCategory,
       );
       isSaved = true;
     } on MonthlyRecommendationLimitException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } on UserApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('서버 저장 실패: ${e.message}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('서버 저장 실패: ${e.message}')));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('서버 저장 중 오류가 발생했습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('서버 저장 중 오류가 발생했습니다.')));
     }
 
     if (!mounted) {
@@ -86,9 +99,13 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? Colors.black : Colors.white;
-    final borderColor = isDark ? const Color(0xFFB5B5B5) : const Color(0xFFB8B8B8);
+    final borderColor = isDark
+        ? const Color(0xFFB5B5B5)
+        : const Color(0xFFB8B8B8);
     final textColor = isDark ? Colors.white : Colors.black;
-    final hintColor = isDark ? const Color(0xFF8F8F8F) : const Color(0xFFA8A8A8);
+    final hintColor = isDark
+        ? const Color(0xFF8F8F8F)
+        : const Color(0xFFA8A8A8);
 
     return ResponsiveScaffold(
       backgroundColor: backgroundColor,
@@ -128,6 +145,23 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
                   hintColor: hintColor,
                   height: 72,
                   controller: _menuNameController,
+                ),
+              ),
+              const SizedBox(height: 24),
+              EntranceFadeSlide(
+                delay: const Duration(milliseconds: 190),
+                fromYOffset: 16,
+                duration: const Duration(milliseconds: 540),
+                child: _CategoryScroller(
+                  categories: _categories,
+                  selectedCategory: _selectedCategory,
+                  textColor: textColor,
+                  borderColor: borderColor,
+                  onSelected: _isSaving
+                      ? null
+                      : (category) {
+                          setState(() => _selectedCategory = category);
+                        },
                 ),
               ),
               const SizedBox(height: 24),
@@ -208,11 +242,93 @@ class _OutlineField extends StatelessWidget {
             isCollapsed: true,
           ),
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black,
             fontSize: 18,
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CategoryScroller extends StatelessWidget {
+  const _CategoryScroller({
+    required this.categories,
+    required this.selectedCategory,
+    required this.textColor,
+    required this.borderColor,
+    required this.onSelected,
+  });
+
+  final List<String> categories;
+  final String selectedCategory;
+  final Color textColor;
+  final Color borderColor;
+  final ValueChanged<String>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedColor = isDark
+        ? const Color(0xFFBFC4FF)
+        : const Color(0xFF0B18F1);
+    final selectedTextColor = isDark ? Colors.black : Colors.white;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            '카테고리',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 46,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              final selected = category == selectedCategory;
+              return ChoiceChip(
+                label: Text(category),
+                selected: selected,
+                onSelected: onSelected == null
+                    ? null
+                    : (_) => onSelected!(category),
+                showCheckmark: false,
+                labelStyle: TextStyle(
+                  color: selected ? selectedTextColor : textColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+                selectedColor: selectedColor,
+                backgroundColor: Colors.transparent,
+                disabledColor: Colors.transparent,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: selected ? selectedColor : borderColor,
+                    width: selected ? 0 : 1,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -246,10 +362,7 @@ class _PrimaryButton extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
       ),
     );

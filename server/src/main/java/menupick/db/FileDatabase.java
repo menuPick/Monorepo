@@ -1,6 +1,7 @@
 package menupick.db;
 
 import menupick.json.JsonUtil;
+import menupick.model.MenuCategoryClassifier;
 import menupick.model.InquiryRecord;
 import menupick.model.RecommendationRecord;
 
@@ -29,12 +30,22 @@ public final class FileDatabase {
             String reason,
             String recommendedMenu
     ) throws IOException {
+        return saveRecommendation(menuName, reason, recommendedMenu, "");
+    }
+
+    public synchronized RecommendationRecord saveRecommendation(
+            String menuName,
+            String reason,
+            String recommendedMenu,
+            String category
+    ) throws IOException {
         long nextId = nextRecommendationId();
         RecommendationRecord record = new RecommendationRecord(
                 nextId,
                 menuName,
                 reason,
                 recommendedMenu,
+                MenuCategoryClassifier.normalize(category, menuName, recommendedMenu),
                 Instant.now().toString()
         );
         appendLine(recommendationFile, JsonUtil.stringify(record.toMap()));
@@ -105,4 +116,3 @@ public final class FileDatabase {
         }
     }
 }
-

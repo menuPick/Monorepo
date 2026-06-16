@@ -18,6 +18,7 @@ class RecommendationItem {
     required this.menuName,
     required this.reason,
     required this.recommendedMenu,
+    required this.category,
     required this.createdAt,
   });
 
@@ -25,6 +26,7 @@ class RecommendationItem {
   final String menuName;
   final String reason;
   final String recommendedMenu;
+  final String category;
   final DateTime createdAt;
 
   factory RecommendationItem.fromJson(Map<String, dynamic> json) {
@@ -33,7 +35,10 @@ class RecommendationItem {
       menuName: (json['menuName'] as String?) ?? '',
       reason: (json['reason'] as String?) ?? '',
       recommendedMenu: (json['recommendedMenu'] as String?) ?? '',
-      createdAt: DateTime.tryParse((json['createdAt'] as String?) ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      category: (json['category'] as String?) ?? '',
+      createdAt:
+          DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }
@@ -56,8 +61,9 @@ class InquiryItem {
       id: (json['id'] as num?)?.toInt() ?? 0,
       message: (json['message'] as String?) ?? '',
       adminEmail: (json['adminEmail'] as String?) ?? '',
-      createdAt: DateTime.tryParse((json['createdAt'] as String?) ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          DateTime.tryParse((json['createdAt'] as String?) ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }
-

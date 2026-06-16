@@ -13,10 +13,11 @@ public interface DatabaseRepository {
             String monthKey,
             String menuName,
             String reason,
-            String recommendedMenu
+            String recommendedMenu,
+            String category
     ) throws IOException;
 
-    RecommendationRecord saveRecommendation(String menuName, String reason, String recommendedMenu) throws IOException;
+    RecommendationRecord saveRecommendation(String menuName, String reason, String recommendedMenu, String category) throws IOException;
 
     RecommendationRecord getLatestRecommendation() throws IOException;
 

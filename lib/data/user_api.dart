@@ -75,6 +75,7 @@ class UserApi {
   Future<RecommendationDto> submitRecommendation({
     required String menuName,
     required String reason,
+    required String category,
   }) async {
     final response = await _client
         .post(
@@ -83,6 +84,7 @@ class UserApi {
           body: jsonEncode({
             'menuName': menuName,
             'reason': reason,
+            'category': category,
             // 비워두면 서버가 추천 메뉴를 생성합니다.
             'recommendedMenu': '',
           }),
@@ -165,6 +167,7 @@ class RecommendationDto {
     required this.menuName,
     required this.reason,
     required this.recommendedMenu,
+    required this.category,
     required this.createdAt,
   });
 
@@ -172,6 +175,7 @@ class RecommendationDto {
   final String menuName;
   final String reason;
   final String recommendedMenu;
+  final String category;
   final String createdAt;
 
   factory RecommendationDto.fromJson(Map<String, dynamic> json) {
@@ -180,6 +184,7 @@ class RecommendationDto {
       menuName: (json['menuName'] as String?) ?? '',
       reason: (json['reason'] as String?) ?? '',
       recommendedMenu: (json['recommendedMenu'] as String?) ?? '',
+      category: (json['category'] as String?) ?? '',
       createdAt: (json['createdAt'] as String?) ?? '',
     );
   }

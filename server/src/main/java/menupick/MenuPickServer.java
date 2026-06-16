@@ -364,13 +364,14 @@ public class MenuPickServer {
                     String menuName = requiredText(body, "menuName", 255);
                     String reason = requiredText(body, "reason", 2000);
                     String recommendedMenu = cleanText(body.get("recommendedMenu"), 255);
+                    String category = cleanText(body.get("category"), 64);
                     if (recommendedMenu.isBlank()) {
                         recommendedMenu = recommendMenu(menuName, reason);
                     }
 
                     String userKey = "network:" + sha256Hex(clientKey);
                     String monthKey = YearMonth.now(ZoneOffset.UTC).toString();
-                    RecommendationRecord record = database.saveMonthlyRecommendation(userKey, monthKey, menuName, reason, recommendedMenu);
+                    RecommendationRecord record = database.saveMonthlyRecommendation(userKey, monthKey, menuName, reason, recommendedMenu, category);
                     if (record == null) {
                         sendError(exchange, 429, "monthly_limit_exceeded", "메뉴 추천은 한 달에 한 번만 올릴 수 있습니다.");
                         return;

@@ -171,17 +171,18 @@ public final class MenuPickServerSecurityTest {
                 String monthKey,
                 String menuName,
                 String reason,
-                String recommendedMenu
+                String recommendedMenu,
+                String category
         ) {
             if (!monthlyRecommendations.add(userKey + ":" + monthKey)) {
                 return null;
             }
-            return saveRecommendation(menuName, reason, recommendedMenu);
+            return saveRecommendation(menuName, reason, recommendedMenu, category);
         }
 
         @Override
-        public synchronized RecommendationRecord saveRecommendation(String menuName, String reason, String recommendedMenu) {
-            RecommendationRecord record = new RecommendationRecord(recommendations.size() + 1L, menuName, reason, recommendedMenu, Instant.now().toString());
+        public synchronized RecommendationRecord saveRecommendation(String menuName, String reason, String recommendedMenu, String category) {
+            RecommendationRecord record = new RecommendationRecord(recommendations.size() + 1L, menuName, reason, recommendedMenu, category, Instant.now().toString());
             recommendations.add(record);
             return record;
         }

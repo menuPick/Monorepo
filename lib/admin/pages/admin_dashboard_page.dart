@@ -506,6 +506,9 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
   }
 
   String _categoryForItem(RecommendationItem item) {
+    if (item.category.trim().isNotEmpty) {
+      return item.category.trim();
+    }
     return CategoryClassifier.classify(item.menuName, item.recommendedMenu);
   }
 

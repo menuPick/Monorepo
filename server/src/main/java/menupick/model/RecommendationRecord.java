@@ -8,13 +8,21 @@ public final class RecommendationRecord {
     private final String menuName;
     private final String reason;
     private final String recommendedMenu;
+    private final String category;
     private final String createdAt;
 
     public RecommendationRecord(long id, String menuName, String reason, String recommendedMenu, String createdAt) {
+        this(id, menuName, reason, recommendedMenu, MenuCategoryClassifier.classify(menuName, recommendedMenu), createdAt);
+    }
+
+    public RecommendationRecord(long id, String menuName, String reason, String recommendedMenu, String category, String createdAt) {
         this.id = id;
         this.menuName = menuName;
         this.reason = reason;
         this.recommendedMenu = recommendedMenu;
+        this.category = category == null || category.isBlank()
+                ? MenuCategoryClassifier.classify(menuName, recommendedMenu)
+                : category;
         this.createdAt = createdAt;
     }
 
@@ -34,6 +42,10 @@ public final class RecommendationRecord {
         return recommendedMenu;
     }
 
+    public String category() {
+        return category;
+    }
+
     public String createdAt() {
         return createdAt;
     }
@@ -44,6 +56,7 @@ public final class RecommendationRecord {
         map.put("menuName", menuName);
         map.put("reason", reason);
         map.put("recommendedMenu", recommendedMenu);
+        map.put("category", category);
         map.put("createdAt", createdAt);
         return map;
     }
@@ -55,6 +68,7 @@ public final class RecommendationRecord {
                 defaultString(map.get("menuName")),
                 defaultString(map.get("reason")),
                 defaultString(map.get("recommendedMenu")),
+                defaultString(map.get("category")),
                 defaultString(map.get("createdAt"))
         );
     }
@@ -71,4 +85,3 @@ public final class RecommendationRecord {
         return value == null ? "" : value;
     }
 }
-

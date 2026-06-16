@@ -1,6 +1,7 @@
 package menupick.db;
 
 import menupick.model.InquiryRecord;
+import menupick.model.MenuCategoryClassifier;
 import menupick.model.MenuDecisionSetting;
 import menupick.model.RecommendationRecord;
 
@@ -34,9 +35,11 @@ public final class MySqlDatabase implements DatabaseRepository {
             String monthKey,
             String menuName,
             String reason,
-            String recommendedMenu
+            String recommendedMenu,
+            String category
     ) throws IOException {
         String now = Instant.now().toString();
+        String normalizedCategory = MenuCategoryClassifier.normalize(category, menuName, recommendedMenu);
         boolean prevAutoCommit;
         try {
             prevAutoCommit = connection.getAutoCommit();
@@ -55,13 +58,14 @@ public final class MySqlDatabase implements DatabaseRepository {
                 statement.executeUpdate();
             }
 
-            String sql = "INSERT INTO recommendations (menu_name, reason, recommended_menu, created_at) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO recommendations (menu_name, reason, recommended_menu, category, created_at) VALUES (?, ?, ?, ?, ?)";
             RecommendationRecord record;
             try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 statement.setString(1, menuName);
                 statement.setString(2, reason);
                 statement.setString(3, recommendedMenu);
-                statement.setString(4, now);
+                statement.setString(4, normalizedCategory);
+                statement.setString(5, now);
                 statement.executeUpdate();
 
                 long id = 0L;
@@ -70,7 +74,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                         id = keys.getLong(1);
                     }
                 }
-                record = new RecommendationRecord(id, menuName, reason, recommendedMenu, now);
+                record = new RecommendationRecord(id, menuName, reason, recommendedMenu, normalizedCategory, now);
             }
 
             connection.commit();
@@ -96,15 +100,18 @@ public final class MySqlDatabase implements DatabaseRepository {
     public synchronized RecommendationRecord saveRecommendation(
             String menuName,
             String reason,
-            String recommendedMenu
+            String recommendedMenu,
+            String category
     ) throws IOException {
         String now = Instant.now().toString();
-        String sql = "INSERT INTO recommendations (menu_name, reason, recommended_menu, created_at) VALUES (?, ?, ?, ?)";
+        String normalizedCategory = MenuCategoryClassifier.normalize(category, menuName, recommendedMenu);
+        String sql = "INSERT INTO recommendations (menu_name, reason, recommended_menu, category, created_at) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, menuName);
             statement.setString(2, reason);
             statement.setString(3, recommendedMenu);
-            statement.setString(4, now);
+            statement.setString(4, normalizedCategory);
+            statement.setString(5, now);
             statement.executeUpdate();
 
             long id = 0L;
@@ -113,7 +120,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                     id = keys.getLong(1);
                 }
             }
-            return new RecommendationRecord(id, menuName, reason, recommendedMenu, now);
+            return new RecommendationRecord(id, menuName, reason, recommendedMenu, normalizedCategory, now);
         } catch (SQLException ex) {
             throw new IOException("추천 저장 실패", ex);
         }
@@ -121,7 +128,7 @@ public final class MySqlDatabase implements DatabaseRepository {
 
     @Override
     public synchronized RecommendationRecord getLatestRecommendation() throws IOException {
-        String sql = "SELECT id, menu_name, reason, recommended_menu, created_at FROM recommendations ORDER BY id DESC LIMIT 1";
+        String sql = "SELECT id, menu_name, reason, recommended_menu, category, created_at FROM recommendations ORDER BY id DESC LIMIT 1";
         try (PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet rs = statement.executeQuery()) {
             if (!rs.next()) {
@@ -132,6 +139,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                     rs.getString("menu_name"),
                     rs.getString("reason"),
                     rs.getString("recommended_menu"),
+                    rs.getString("category"),
                     rs.getString("created_at")
             );
         } catch (SQLException ex) {
@@ -141,7 +149,7 @@ public final class MySqlDatabase implements DatabaseRepository {
 
     @Override
     public synchronized RecommendationRecord getRecommendationById(long id) throws IOException {
-        String sql = "SELECT id, menu_name, reason, recommended_menu, created_at FROM recommendations WHERE id = ?";
+        String sql = "SELECT id, menu_name, reason, recommended_menu, category, created_at FROM recommendations WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
             try (ResultSet rs = statement.executeQuery()) {
@@ -153,6 +161,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                         rs.getString("menu_name"),
                         rs.getString("reason"),
                         rs.getString("recommended_menu"),
+                        rs.getString("category"),
                         rs.getString("created_at")
                 );
             }
@@ -237,7 +246,7 @@ public final class MySqlDatabase implements DatabaseRepository {
     @Override
     public synchronized List<RecommendationRecord> listRecommendations(int limit) throws IOException {
         int safeLimit = Math.max(1, Math.min(limit, 200));
-        String sql = "SELECT id, menu_name, reason, recommended_menu, created_at FROM recommendations ORDER BY id DESC LIMIT ?";
+        String sql = "SELECT id, menu_name, reason, recommended_menu, category, created_at FROM recommendations ORDER BY id DESC LIMIT ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, safeLimit);
             try (ResultSet rs = statement.executeQuery()) {
@@ -248,6 +257,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                             rs.getString("menu_name"),
                             rs.getString("reason"),
                             rs.getString("recommended_menu"),
+                            rs.getString("category"),
                             rs.getString("created_at")
                     ));
                 }
@@ -377,6 +387,7 @@ public final class MySqlDatabase implements DatabaseRepository {
                     menu_name VARCHAR(255) NOT NULL,
                     reason TEXT NOT NULL,
                     recommended_menu VARCHAR(255) NOT NULL,
+                    category VARCHAR(64) NOT NULL DEFAULT '미분류',
                     created_at VARCHAR(64) NOT NULL
                 )
                 """;
@@ -410,6 +421,8 @@ public final class MySqlDatabase implements DatabaseRepository {
 
         try (Statement statement = connection.createStatement()) {
             statement.execute(recommendationsSql);
+            ensureRecommendationCategoryColumn(statement);
+            backfillRecommendationCategories(statement);
             statement.execute(inquiriesSql);
             statement.execute(decisionSql);
             statement.execute(monthlyLimitSql);
@@ -425,5 +438,74 @@ public final class MySqlDatabase implements DatabaseRepository {
                 }
             }
         }
+    }
+
+    private void ensureRecommendationCategoryColumn(Statement statement) throws SQLException {
+        try {
+            statement.execute("ALTER TABLE recommendations ADD COLUMN category VARCHAR(64) NOT NULL DEFAULT '미분류' AFTER recommended_menu");
+        } catch (SQLException ex) {
+            // Ignore if the column already exists.
+            if (!"42S21".equals(ex.getSQLState()) && ex.getErrorCode() != 1060) {
+                throw ex;
+            }
+        }
+    }
+
+    private void backfillRecommendationCategories(Statement statement) throws SQLException {
+        statement.executeUpdate("""
+                UPDATE recommendations
+                SET category = CASE
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%볶음밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%덮밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%초밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%유부초밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%파스타%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%국밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%밥%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%죽%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%국수%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%라면%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%냉면%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%비빔면%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%짜장면%' THEN '주식'
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%찌개%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%마라탕%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%탕%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%국%' THEN '국/찌개'
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%김치%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%깍두기%' THEN '김치류'
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%고기%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%제육%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%생선%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%명태%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%강정%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%닭%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%치킨%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%황금올리브%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%돼지%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%소고기%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%스테이크%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%새우%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%쉬림프%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%연어%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%육회%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%육바연%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%홍어%' THEN '주찬(메인 반찬)'
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%감자채%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%감자튀김%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%채소%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%무침%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%조림%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%전%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%볶음%' THEN '부찬(보조 반찬)'
+                    WHEN CONCAT(menu_name, ' ', recommended_menu) LIKE '%과일%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%음료%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%떡%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%과자%'
+                      OR CONCAT(menu_name, ' ', recommended_menu) LIKE '%디저트%' THEN '후식(디저트)'
+                    ELSE '미분류'
+                END
+                WHERE category IS NULL OR category = '' OR category = '미분류'
+                """);
     }
 }
