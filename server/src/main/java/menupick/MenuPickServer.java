@@ -5,11 +5,14 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import menupick.db.DatabaseRepository;
+import menupick.db.FileDatabase;
 import menupick.db.MySqlDatabase;
 import menupick.json.JsonUtil;
 import menupick.model.InquiryRecord;
 import menupick.model.MenuDecisionSetting;
 import menupick.model.RecommendationRecord;
+import menupick.recommendation.RecommendationEngine;
+import menupick.recommendation.RuleBasedRecommendationEngine;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,6 +45,7 @@ public class MenuPickServer {
     public static final String DEFAULT_DB_URL =
             "jdbc:mysql://localhost:3306/menupick?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true";
     public static final String ADMIN_EMAIL = "admin@local";
+    private static final String DEFAULT_STORAGE_DIR = "data";
 
     private static final Logger logger = Logger.getLogger(MenuPickServer.class.getName());
     private static final int DEFAULT_PORT = 80;
@@ -59,14 +63,24 @@ public class MenuPickServer {
     private final AdminService adminService;
     private final PublicWriteGuard publicWriteGuard;
     private final CorsPolicy corsPolicy;
+    private final RecommendationEngine recommendationEngine;
     private HttpServer httpServer;
 
     public MenuPickServer(int port, DatabaseRepository database, String adminIdHash) {
+        this(port, database, adminIdHash, new RuleBasedRecommendationEngine());
+    }
+
+    public MenuPickServer(
+            int port,
+            DatabaseRepository database,
+            String adminIdHash,
+            RecommendationEngine recommendationEngine) {
         this.requestedPort = port;
         this.database = database;
         this.adminService = new AdminService(adminIdHash);
         this.publicWriteGuard = new PublicWriteGuard();
         this.corsPolicy = CorsPolicy.fromEnvironment();
+        this.recommendationEngine = recommendationEngine;
     }
 
     public MenuPickServer(int port, String dbUrl, String dbUser, String dbPassword, String adminIdHash) throws IOException {
@@ -75,30 +89,31 @@ public class MenuPickServer {
 
     public static void main(String[] args) {
         int port = parsePort(args, envOrDefault("PORT", String.valueOf(DEFAULT_PORT)));
-        String dbUrl = envOrDefault("DB_URL", DEFAULT_DB_URL);
-        String dbUser = envOrDefault("DB_USER", "root");
-        String dbPassword = envOrDefault("DB_PASSWORD", "");
+        String dbUrl = System.getenv("DB_URL");
+        String storageDir = envOrDefault("DATA_DIR", DEFAULT_STORAGE_DIR);
         String adminIdHash = loadAdminIdHash();
 
-        if (adminIdHash.isBlank()) {
-            logger.severe("ADMIN_ID_HASH or ADMIN_ID_HASH_FILE is required.");
-            return;
-        }
-
         try {
-            MenuPickServer server = new MenuPickServer(port, dbUrl, dbUser, dbPassword, adminIdHash);
+            DatabaseRepository database;
+            if (dbUrl == null || dbUrl.isBlank()) {
+                database = new FileDatabase(java.nio.file.Path.of(storageDir));
+            } else {
+                database = new MySqlDatabase(dbUrl, envOrDefault("DB_USER", "root"), envOrDefault("DB_PASSWORD", ""));
+            }
+            if (adminIdHash.isBlank()) adminIdHash = sha256Hex(envOrDefault("ADMIN_ID", "admin"));
+            MenuPickServer server = new MenuPickServer(port, database, adminIdHash);
             server.start();
-            logger.info("MenuPick Server started on port " + server.getPort());
-            logger.info("Health check available at http://localhost:" + server.getPort() + "/health");
+            logger.info("MenuPick server started: port=" + server.getPort() + ", storage=" + storageDir);
         } catch (IOException e) {
             logger.severe("Server failed to start: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
     public void start() throws IOException {
         httpServer = HttpServer.create(new InetSocketAddress(requestedPort), 0);
-        httpServer.createContext("/api/recommendations", new CorsMiddleware(corsPolicy, new RecommendationHandler(database, publicWriteGuard)));
+        httpServer.createContext("/api/recommendations", new CorsMiddleware(
+                corsPolicy,
+                new RecommendationHandler(database, publicWriteGuard, recommendationEngine)));
         httpServer.createContext("/api/inquiries", new CorsMiddleware(corsPolicy, new InquiryHandler(database, adminService, publicWriteGuard)));
         httpServer.createContext("/api/admin", new CorsMiddleware(corsPolicy, new AdminHandler(database, adminService)));
         httpServer.createContext("/health", new CorsMiddleware(corsPolicy, new HealthHandler()));
@@ -344,10 +359,15 @@ public class MenuPickServer {
     private static final class RecommendationHandler extends BaseHandler {
         private final DatabaseRepository database;
         private final PublicWriteGuard publicWriteGuard;
+        private final RecommendationEngine recommendationEngine;
 
-        private RecommendationHandler(DatabaseRepository database, PublicWriteGuard publicWriteGuard) {
+        private RecommendationHandler(
+                DatabaseRepository database,
+                PublicWriteGuard publicWriteGuard,
+                RecommendationEngine recommendationEngine) {
             this.database = database;
             this.publicWriteGuard = publicWriteGuard;
+            this.recommendationEngine = recommendationEngine;
         }
 
         @Override
@@ -366,7 +386,7 @@ public class MenuPickServer {
                     String recommendedMenu = cleanText(body.get("recommendedMenu"), 255);
                     String category = cleanText(body.get("category"), 64);
                     if (recommendedMenu.isBlank()) {
-                        recommendedMenu = recommendMenu(menuName, reason);
+                        recommendedMenu = recommendationEngine.recommend(menuName, reason);
                     }
 
                     String userKey = "network:" + sha256Hex(clientKey);
@@ -777,20 +797,4 @@ public class MenuPickServer {
         return address.getAddress().getHostAddress();
     }
 
-    private static String recommendMenu(String menuName, String reason) {
-        String source = (menuName + " " + reason).toLowerCase(Locale.ROOT);
-        if (source.contains("매운") || source.contains("떡볶") || source.contains("spicy")) {
-            return "떡볶이";
-        }
-        if (source.contains("채소") || source.contains("야채") || source.contains("비빔")) {
-            return "비빔밥";
-        }
-        if (source.contains("국") || source.contains("따뜻")) {
-            return "김치찌개";
-        }
-        if (source.contains("면") || source.contains("noodle")) {
-            return "잔치국수";
-        }
-        return "비빔밥";
-    }
 }

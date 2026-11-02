@@ -9,10 +9,7 @@ import 'package:excel/excel.dart' hide Border;
 import '../utils/category_classifier.dart';
 import '../utils/file_download.dart';
 
-const String kAdminApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://api.54.116.164.162.nip.io',
-);
+const String kAdminApiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
 class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({

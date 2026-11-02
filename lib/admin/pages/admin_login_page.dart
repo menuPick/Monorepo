@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/admin_api.dart';
 import '../services/admin_session_store.dart';
 
-const String kAdminApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://api.54.116.164.162.nip.io',
-);
+const String kAdminApiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key, required this.onLoginSuccess});
