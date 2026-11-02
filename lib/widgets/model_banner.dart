@@ -7,6 +7,7 @@ const Key kModelBannerKey = Key('model-3d-banner');
 
 class ModelBannerConfig {
   static bool forcePlaceholder = false;
+  static bool forceRealModel = false;
 }
 
 class ModelBanner extends StatelessWidget {
@@ -16,7 +17,8 @@ class ModelBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ModelBannerConfig.forcePlaceholder || kIsWidgetTest) {
+    if (ModelBannerConfig.forcePlaceholder ||
+        (kIsWidgetTest && !ModelBannerConfig.forceRealModel)) {
       return Container(
         key: kModelBannerKey,
         height: height,
