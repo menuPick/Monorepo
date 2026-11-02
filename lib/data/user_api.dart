@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
-const String kApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'https://api.54.116.164.162.nip.io',
-);
+const String kApiBaseUrl = String.fromEnvironment('API_BASE_URL');
+const String kLocalApiBaseUrl = kIsWeb
+    ? 'http://localhost:18080'
+    : 'http://10.0.2.2:18080';
 
 /// 위젯 테스트에서는 실제 네트워크 호출이 불필요하고,
 /// 오히려 테스트를 느리게 만들 수 있으므로 차단합니다.
@@ -16,7 +16,9 @@ const bool kIsFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
 class UserApi {
   UserApi({http.Client? client, String? baseUrl})
     : _client = client ?? http.Client(),
-      baseUrl = _normalizeBaseUrl(baseUrl ?? kApiBaseUrl);
+      baseUrl = _normalizeBaseUrl(
+        baseUrl ?? (kApiBaseUrl.isEmpty ? kLocalApiBaseUrl : kApiBaseUrl),
+      );
 
   final http.Client _client;
   final String baseUrl;

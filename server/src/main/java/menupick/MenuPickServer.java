@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import menupick.db.DatabaseRepository;
+import menupick.db.FileDatabase;
 import menupick.db.MySqlDatabase;
 import menupick.json.JsonUtil;
 import menupick.model.InquiryRecord;
@@ -42,6 +43,7 @@ public class MenuPickServer {
     public static final String DEFAULT_DB_URL =
             "jdbc:mysql://localhost:3306/menupick?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&createDatabaseIfNotExist=true";
     public static final String ADMIN_EMAIL = "admin@local";
+    private static final String DEFAULT_STORAGE_DIR = "data";
 
     private static final Logger logger = Logger.getLogger(MenuPickServer.class.getName());
     private static final int DEFAULT_PORT = 80;
@@ -75,24 +77,23 @@ public class MenuPickServer {
 
     public static void main(String[] args) {
         int port = parsePort(args, envOrDefault("PORT", String.valueOf(DEFAULT_PORT)));
-        String dbUrl = envOrDefault("DB_URL", DEFAULT_DB_URL);
-        String dbUser = envOrDefault("DB_USER", "root");
-        String dbPassword = envOrDefault("DB_PASSWORD", "");
+        String dbUrl = System.getenv("DB_URL");
+        String storageDir = envOrDefault("DATA_DIR", DEFAULT_STORAGE_DIR);
         String adminIdHash = loadAdminIdHash();
 
-        if (adminIdHash.isBlank()) {
-            logger.severe("ADMIN_ID_HASH or ADMIN_ID_HASH_FILE is required.");
-            return;
-        }
-
         try {
-            MenuPickServer server = new MenuPickServer(port, dbUrl, dbUser, dbPassword, adminIdHash);
+            DatabaseRepository database;
+            if (dbUrl == null || dbUrl.isBlank()) {
+                database = new FileDatabase(java.nio.file.Path.of(storageDir));
+            } else {
+                database = new MySqlDatabase(dbUrl, envOrDefault("DB_USER", "root"), envOrDefault("DB_PASSWORD", ""));
+            }
+            if (adminIdHash.isBlank()) adminIdHash = sha256Hex(envOrDefault("ADMIN_ID", "admin"));
+            MenuPickServer server = new MenuPickServer(port, database, adminIdHash);
             server.start();
-            logger.info("MenuPick Server started on port " + server.getPort());
-            logger.info("Health check available at http://localhost:" + server.getPort() + "/health");
+            logger.info("MenuPick server started: port=" + server.getPort() + ", storage=" + storageDir);
         } catch (IOException e) {
             logger.severe("Server failed to start: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 

@@ -13,7 +13,9 @@ class AdminApi {
 
   static String normalizeBaseUrl(String raw) {
     var value = raw.trim();
-    if (value.isEmpty) return value;
+    if (value.isEmpty) {
+      return kIsWeb ? Uri.base.origin : 'http://10.0.2.2:18080';
+    }
     value = value.endsWith('/') ? value.substring(0, value.length - 1) : value;
     if (kIsWeb &&
         Uri.base.scheme == 'https' &&
