@@ -65,5 +65,6 @@ fi
 
 export DB_URL DB_USER DB_PASSWORD
 
-# DB 접속 정보는 환경변수로 전달해 프로세스 목록에 비밀번호가 노출되지 않게 합니다.
-exec java -jar /app/menu-pick-server.jar "--port=${PORT}"
+# DB 접속 정보와 PORT는 환경변수로 전달합니다(프로세스 목록에 비밀번호가 노출되지 않음).
+export PORT
+exec java -jar /app/menu-pick-server.jar

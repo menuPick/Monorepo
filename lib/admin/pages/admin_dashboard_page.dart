@@ -6,7 +6,6 @@ import '../services/admin_api.dart';
 import '../services/admin_session_store.dart';
 import 'package:excel/excel.dart' hide Border;
 
-import '../utils/category_classifier.dart';
 import '../utils/file_download.dart';
 
 const String kAdminApiBaseUrl = String.fromEnvironment('API_BASE_URL');
@@ -460,12 +459,21 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
   late Future<List<RecommendationItem>> _future;
   final Set<int> _selectedIds = <int>{};
   bool _isDeleting = false;
-  String _selectedCategory = '전체';
+  Map<int, AiAssessmentItem> _ai = const {};
 
   @override
   void initState() {
     super.initState();
-    _future = widget.api.fetchRecommendations(token: widget.session.token);
+    _future = _load();
+  }
+
+  /// 추천 목록과 AI 판별 결과를 함께 불러옵니다. AI 결과가 없어도 목록은 표시됩니다.
+  Future<List<RecommendationItem>> _load() async {
+    final token = widget.session.token;
+    final aiFuture = widget.api.fetchAiAssessments(token: token);
+    final items = await widget.api.fetchRecommendations(token: token);
+    _ai = await aiFuture;
+    return items;
   }
 
   void _toggleSelected(int id) {
@@ -493,20 +501,9 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
   Future<void> _refresh() async {
     setState(() {
       _selectedIds.clear();
-      _future = widget.api.fetchRecommendations(token: widget.session.token);
+      _future = _load();
     });
     await _future;
-  }
-
-  List<String> _categoryOptions() {
-    return ['전체', ...CategoryClassifier.categoryOrder];
-  }
-
-  String _categoryForItem(RecommendationItem item) {
-    if (item.category.trim().isNotEmpty) {
-      return item.category.trim();
-    }
-    return CategoryClassifier.classify(item.menuName, item.recommendedMenu);
   }
 
   Future<void> _exportXlsx(List<RecommendationItem> items) async {
@@ -517,7 +514,6 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
       TextCellValue('원한메뉴'),
       TextCellValue('추천메뉴'),
       TextCellValue('이유'),
-      TextCellValue('카테고리'),
       TextCellValue('작성시간'),
     ]);
     for (final item in items) {
@@ -526,18 +522,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
         TextCellValue(item.menuName),
         TextCellValue(item.recommendedMenu),
         TextCellValue(item.reason),
-        TextCellValue(_categoryForItem(item)),
         TextCellValue(item.createdAt.toLocal().toString()),
-      ]);
-    }
-
-    final categorySheet = excel['카테고리목록'];
-    categorySheet.appendRow([TextCellValue('카테고리'), TextCellValue('개수')]);
-    final counts = CategoryClassifier.summarize(items);
-    for (final category in CategoryClassifier.categoryOrder) {
-      categorySheet.appendRow([
-        TextCellValue(category),
-        IntCellValue(counts[category] ?? 0),
       ]);
     }
 
@@ -616,7 +601,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
       ).showSnackBar(SnackBar(content: Text('삭제 완료: $deleted개')));
       setState(() {
         _selectedIds.clear();
-        _future = widget.api.fetchRecommendations(token: widget.session.token);
+        _future = _load();
       });
       await _future;
     } catch (e) {
@@ -709,13 +694,7 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
           );
         }
 
-        final categoryOptions = _categoryOptions();
-        final filteredItems = _selectedCategory == '전체'
-            ? items
-            : items
-                  .where((item) => _categoryForItem(item) == _selectedCategory)
-                  .toList();
-        final categoryCounts = CategoryClassifier.summarize(items);
+        final filteredItems = items;
         final recentText = items.isEmpty
             ? '-'
             : _formatDateTime(items.first.createdAt);
@@ -742,18 +721,6 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                         label: '전체 추천',
                         value: '${items.length}',
                         accent: const Color(0xFF4F56D7),
-                      ),
-                      _MetricData(
-                        icon: Icons.filter_alt_rounded,
-                        label: '현재 보기',
-                        value: '${filteredItems.length}',
-                        accent: const Color(0xFF00A88F),
-                      ),
-                      _MetricData(
-                        icon: Icons.local_fire_department_rounded,
-                        label: '한식 분류',
-                        value: '${categoryCounts['한식'] ?? 0}',
-                        accent: const Color(0xFFF05A28),
                       ),
                       _MetricData(
                         icon: Icons.schedule_rounded,
@@ -784,27 +751,6 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                   }
                                 },
                           child: Text(allSelected ? '전체 해제' : '전체 선택'),
-                        );
-
-                        final categoryDropdown = DropdownButton<String>(
-                          value: _selectedCategory,
-                          borderRadius: BorderRadius.circular(14),
-                          underline: const SizedBox.shrink(),
-                          items: categoryOptions
-                              .map(
-                                (category) => DropdownMenuItem(
-                                  value: category,
-                                  child: Text(category),
-                                ),
-                              )
-                              .toList(growable: false),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _selectedCategory = value;
-                              _selectedIds.clear();
-                            });
-                          },
                         );
 
                         final exportButton = FilledButton.tonalIcon(
@@ -848,7 +794,6 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  categoryDropdown,
                                   exportButton,
                                   selectAllButton,
                                   deleteButton,
@@ -868,8 +813,6 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                                 ),
                               ),
                             ),
-                            categoryDropdown,
-                            const SizedBox(width: 8),
                             exportButton,
                             const SizedBox(width: 8),
                             selectAllButton,
@@ -888,12 +831,11 @@ class _RecommendationsPageState extends State<_RecommendationsPage> {
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final item = filteredItems[index];
                     final isSelected = _selectedIds.contains(item.id);
-                    final category = _categoryForItem(item);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _RecommendationCard(
                         item: item,
-                        category: category,
+                        ai: _ai[item.id],
                         selected: isSelected,
                         deleting: _isDeleting,
                         selectionMode: _selectedIds.isNotEmpty,
@@ -1327,7 +1269,7 @@ class _AdminPanel extends StatelessWidget {
 class _RecommendationCard extends StatelessWidget {
   const _RecommendationCard({
     required this.item,
-    required this.category,
+    required this.ai,
     required this.selected,
     required this.deleting,
     required this.selectionMode,
@@ -1336,7 +1278,7 @@ class _RecommendationCard extends StatelessWidget {
   });
 
   final RecommendationItem item;
-  final String category;
+  final AiAssessmentItem? ai;
   final bool selected;
   final bool deleting;
   final bool selectionMode;
@@ -1374,10 +1316,6 @@ class _RecommendationCard extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _StatusPill(
-                        label: category,
-                        icon: Icons.category_rounded,
-                      ),
-                      _StatusPill(
                         label: '#${item.id}',
                         icon: Icons.tag_rounded,
                       ),
@@ -1385,8 +1323,18 @@ class _RecommendationCard extends StatelessWidget {
                         label: _formatDateTime(item.createdAt),
                         icon: Icons.schedule_rounded,
                       ),
+                      if (ai != null) _AiRiskPill(assessment: ai!),
                     ],
                   ),
+                  if (ai != null && ai!.riskLevel != 'low') ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'AI 근거: ${ai!.reasons.join(' ')}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: scheme.error),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Text(
                     item.recommendedMenu,
@@ -1554,6 +1502,58 @@ class _StatusPill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// AI 위험 판별 표시. 판단은 참고용이며 조치(삭제·결정)는 관리자가 합니다.
+class _AiRiskPill extends StatelessWidget {
+  const _AiRiskPill({required this.assessment});
+
+  final AiAssessmentItem assessment;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (assessment.riskLevel) {
+      'high' => const Color(0xFFD93025),
+      'medium' => const Color(0xFFE37400),
+      _ => const Color(0xFF188038),
+    };
+    final flags = assessment.flags
+        .map((f) => AiAssessmentItem.flagLabels[f] ?? f)
+        .join(', ');
+    final label = flags.isEmpty
+        ? 'AI ${assessment.levelLabel}'
+        : 'AI ${assessment.levelLabel} · $flags';
+
+    return Tooltip(
+      message: [
+        '위험 점수 ${(assessment.riskScore * 100).round()}점 (${assessment.engine})',
+        ...assessment.reasons,
+      ].join('\n'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

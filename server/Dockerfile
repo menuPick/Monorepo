@@ -4,19 +4,24 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 
-COPY pom.xml ./
-COPY src ./src
+COPY .mvn ./.mvn
+COPY mvnw pom.xml ./
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q -B dependency:go-offline
 
-RUN mvn -q -DskipTests package
+COPY src ./src
+RUN ./mvnw -q -B -DskipTests package
 
 # Runtime stage
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Maven Shade 기본 설정에서는 기본 jar 파일명(menu-pick-server-*.jar)이 유지됩니다.
-COPY --from=build /workspace/target/menu-pick-server-*.jar /app/menu-pick-server.jar
+COPY --from=build /workspace/target/menu-pick-server.jar /app/menu-pick-server.jar
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
+
+ENV PORT=80 \
+    API_DOCS_ENABLED=false \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 80
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
