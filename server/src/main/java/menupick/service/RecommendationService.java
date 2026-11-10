@@ -27,6 +27,8 @@ public class RecommendationService {
     private final RecommendationEngine engine;
     private final Clock clock;
     private final boolean monthlyLimitEnabled;
+    private final MenuSafety menuSafety;
+    private static final String FALLBACK_MENU = "비빔밥";
 
     /**
      * GET /api/recommendations/latest는 앱을 열 때마다 호출되는 가장 잦은 요청입니다.
@@ -36,25 +38,30 @@ public class RecommendationService {
     private final AtomicLong writeVersion = new AtomicLong();
 
     public RecommendationService(MenuPickRepository repository, RecommendationEngine engine, Clock clock,
-                                 MenuPickProperties properties) {
+                                 MenuPickProperties properties, MenuSafety menuSafety) {
         this.repository = repository;
         this.engine = engine;
         this.clock = clock;
+        this.menuSafety = menuSafety;
         this.monthlyLimitEnabled = properties.rateLimit().monthlyRecommendation();
     }
 
     /** 이번 달 이미 올렸으면 empty. 월 1회 제한이 꺼져 있으면 항상 저장합니다. */
     public Optional<Recommendation> submit(String clientKey, String menuName, String reason,
                                            String recommendedMenu, String category) {
-        // 사용자가 원하는 메뉴를 적었으면 그대로 씁니다. AI·규칙 엔진은 메뉴가 없을 때만 고릅니다.
-        // (위험한 메뉴는 바꾸지 않고 AI 판별 결과로 관리자에게 알립니다.)
+        // 사용자가 원하는 메뉴를 적었고 안전하면 그대로 씁니다.
+        // 메뉴가 없거나 위험하면(술·담배·음식 아님 등) AI가 이유를 보고 대체 메뉴를 고릅니다.
+        // 원래 입력(menuName)은 그대로 저장되고, AI 위험 판별로 관리자에게도 표시됩니다.
         String menu;
-        if (!recommendedMenu.isBlank()) {
+        if (!recommendedMenu.isBlank() && menuSafety.isSafeMenu(recommendedMenu)) {
             menu = recommendedMenu;
-        } else if (WantedMenu.isMenuName(menuName)) {
+        } else if (WantedMenu.isMenuName(menuName) && menuSafety.isSafeMenu(menuName)) {
             menu = menuName.strip();
         } else {
             menu = engine.recommend(menuName, reason);
+            if (MenuSafety.containsBlockedWord(menu)) {
+                menu = FALLBACK_MENU; // 선택 엔진(LLM)이 위험한 값을 돌려준 경우 대비
+            }
         }
         NewRecommendation input = new NewRecommendation(menuName, reason, menu, category == null ? "" : category);
         if (!monthlyLimitEnabled) {

@@ -26,6 +26,7 @@ Flutter 앱이 사용하는 경로·JSON 필드·상태 코드입니다. **필�
 | 메서드·경로 | 요청 | 성공 | 주요 오류 |
 |---|---|---|---|
 | `POST /api/recommendations` | `menuName`(필수, ≤255), `reason`(필수, ≤2000), `recommendedMenu`(선택, 비우면 서버가 추천), `category`(선택) | 201 Recommendation | 400 `bad_request`, 429 `monthly_limit_exceeded`(네트워크당 월 1회, `MONTHLY_RECOMMENDATION_LIMIT=false`면 끔 — 로컬 실행 기본값), 429 `rate_limited` |
+| `POST /api/recommendations/reason-draft` *(2026-11-10 추가)* | `menuName`, `reason`(선택) | 200 `{reason, added, engine}` — 사용자가 쓴 말 뒤에 AI 문장을 덧붙인 이유(저장 안 함) | 429, 503 `ai_unavailable` |
 | `GET /api/recommendations/latest` | — | 200 Recommendation | 404 `not_published` |
 | `POST /api/inquiries` | `message`(≤4000) | 201 Inquiry | 400, 429 `rate_limited` |
 | `GET /health` | — | 200 | — |
@@ -51,6 +52,7 @@ Flutter 앱이 사용하는 경로·JSON 필드·상태 코드입니다. **필�
 | 메서드·경로 | 요청 | 응답 |
 |---|---|---|
 | `POST /v1/recommend` | `menuName`, `reason` | `recommendedMenu`, `confidence`, `reasons`[], `engine` |
+| `POST /v1/elaborate` | `menuName`, `reason` | `reason`(사용자 말 + 덧붙인 문장), `added`, `engine` |
 | `POST /v1/assess` | `menuName`, `reason`, `recommendedMenu` | `riskScore`, `riskLevel`, `flags`[], `reasons`[], `engine` |
 | `GET /health` | — | `ok`, `engine`(`graph`/`llm`), `graph`{`nodes`,`edges`}, (llm일 때) `llm`, `model` |
 

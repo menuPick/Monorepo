@@ -91,3 +91,17 @@ def test_ollama_bad_json_returns_none(monkeypatch):
         return httpx.Response(200, json={"message": {"content": "not json"}})
     monkeypatch.setattr(llm_engine.httpx, "post", fake_post)
     assert llm_engine._ask("x", "y", {}) is None
+
+
+def test_elaborate_endpoint():
+    body = client.post("/v1/elaborate", json={"menuName": "김치찌개", "reason": "추워요"}).json()
+    assert body["reason"].startswith("추워요.") and body["engine"] == "graph"
+    assert body["added"] and body["added"] in body["reason"]
+
+
+def test_elaborate_llm_keeps_user_words(monkeypatch):
+    monkeypatch.setenv("AI_ENGINE", "llm")
+    monkeypatch.setattr(llm_engine, "_ask", lambda *a: {"added": "비 오는 날엔 따뜻한 국물이 최고예요."})
+    body = client.post("/v1/elaborate", json={"menuName": "", "reason": "비가 와요"}).json()
+    assert body == {"reason": "비가 와요. 비 오는 날엔 따뜻한 국물이 최고예요.",
+                    "added": "비 오는 날엔 따뜻한 국물이 최고예요.", "engine": "llm"}

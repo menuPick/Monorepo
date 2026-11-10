@@ -20,8 +20,34 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
   final TextEditingController _menuNameController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
   bool _isSaving = false;
+  bool _isDrafting = false;
 
   final UserApi _api = UserApi();
+
+  /// 사용자가 쓴 이유는 그대로 두고, AI가 뒤에 문장을 덧붙여 칸을 채웁니다. 고쳐 쓸 수 있습니다.
+  Future<void> _draftReason() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isDrafting = true);
+    try {
+      final drafted = await _api.draftReason(
+        menuName: _menuNameController.text.trim(),
+        reason: _reasonController.text.trim(),
+      );
+      if (!mounted) return;
+      _reasonController.value = TextEditingValue(
+        text: drafted,
+        selection: TextSelection.collapsed(offset: drafted.length),
+      );
+    } on UserApiException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('AI가 이유를 만들지 못했습니다. 잠시 후 다시 시도해주세요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isDrafting = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -154,7 +180,31 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
                   controller: _reasonController,
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: (_isDrafting || _isSaving) ? null : _draftReason,
+                  icon: _isDrafting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome_rounded),
+                  label: Text(_isDrafting ? 'AI가 쓰는 중...' : 'AI로 이유 자세히 쓰기'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: isDark
+                        ? const Color(0xFFBFC4FF)
+                        : const Color(0xFF0B18F1),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
               EntranceFadeSlide(
                 delay: const Duration(milliseconds: 300),
                 fromYOffset: 14,

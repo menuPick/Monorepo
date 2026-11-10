@@ -105,6 +105,26 @@ class UserApi {
     return RecommendationDto.fromJson(body);
   }
 
+  /// 먹고 싶은 이유를 AI가 자세히: 사용자가 쓴 말 뒤에 문장을 덧붙인 전체 이유를 돌려줍니다(저장 안 함).
+  Future<String> draftReason({
+    required String menuName,
+    required String reason,
+  }) async {
+    final response = await _client
+        .post(
+          _uri('/api/recommendations/reason-draft'),
+          headers: const {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode({'menuName': menuName, 'reason': reason}),
+        )
+        .timeout(const Duration(seconds: 120));
+
+    final body = _decodeJson(response);
+    if (response.statusCode != 200) {
+      throw UserApiException(body['message']?.toString() ?? '이유를 만들지 못했습니다.');
+    }
+    return (body['reason'] as String?) ?? reason;
+  }
+
   Future<RecommendationDto> fetchLatestRecommendation() async {
     final response = await _client
         .get(_uri('/api/recommendations/latest'))

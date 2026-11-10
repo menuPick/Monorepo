@@ -37,5 +37,9 @@ class AiDisabledTest extends ApiTestSupport {
         assertEquals("ai_disabled", json.readTree(reassess.body()).get("error").asString());
 
         assertStatus(401, send("GET", "/api/admin/ai-assessments", null), "admin token required");
+
+        HttpResponse<String> draft = send("POST", "/api/recommendations/reason-draft", "{\"reason\":\"추워요\"}");
+        assertStatus(503, draft, "reason draft needs AI");
+        assertEquals("ai_unavailable", json.readTree(draft.body()).get("error").asString());
     }
 }

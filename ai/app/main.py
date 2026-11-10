@@ -13,7 +13,8 @@ import os
 from fastapi import Depends, FastAPI, Header, HTTPException
 
 from . import graph_engine, llm_engine
-from .schemas import AssessRequest, AssessResponse, RecommendRequest, RecommendResponse
+from .schemas import (AssessRequest, AssessResponse, ElaborateRequest, ElaborateResponse, RecommendRequest,
+                      RecommendResponse)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
 
@@ -62,3 +63,17 @@ def assess(body: AssessRequest) -> AssessResponse:
         if result is not None:
             return result
     return graph_engine.assess(*args)
+
+
+@app.post("/v1/elaborate", response_model=ElaborateResponse, dependencies=[Depends(require_token)])
+def elaborate(body: ElaborateRequest) -> ElaborateResponse:
+    """먹고 싶은 이유를 자세히: 사용자가 쓴 말은 그대로 두고 뒤에 AI 문장을 덧붙입니다."""
+    menu_name, reason = body.menuName.strip(), body.reason.strip()
+    if engine_name() == "llm" and graph_engine.assess(menu_name, reason, "").riskLevel != "high":
+        added = llm_engine.elaborate(menu_name, reason)
+        if added:
+            base = reason if not reason or reason[-1] in ".!?~" else reason + "."
+            full = f"{base} {added}".strip()[:2000]
+            return ElaborateResponse(reason=full, added=added, engine="llm")
+    full, added = graph_engine.elaborate(menu_name, reason)
+    return ElaborateResponse(reason=full, added=added, engine="graph")

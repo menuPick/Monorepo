@@ -79,9 +79,33 @@ class AiIntegrationTest extends ApiTestSupport {
         assertTrue(json.readTree(send("GET", "/api/admin/ai-assessments", null, null, token).body()).get("items").isEmpty());
     }
 
+    @Test
+    void wantedMenuJudgedUnsafeByAiIsReplacedByAiRecommendation() throws Exception {
+        // 서버 금지어에는 없지만 AI가 위험(high, not_food)이라고 판단한 메뉴 → AI가 이유를 보고 대체
+        HttpResponse<String> created = send("POST", "/api/recommendations",
+                "{\"menuName\":\"이상한음료\",\"reason\":\"그냥\"}");
+        assertStatus(201, created, "recommendation");
+        JsonNode recommendation = json.readTree(created.body());
+        assertEquals("이상한음료", recommendation.get("menuName").asString(), "original input kept");
+        assertEquals("AI 김치볶음밥", recommendation.get("recommendedMenu").asString(), "replaced by AI pick");
+    }
+
+    @Test
+    void reasonDraftAppendsAiSentencesToUserWords() throws Exception {
+        HttpResponse<String> draft = send("POST", "/api/recommendations/reason-draft",
+                "{\"menuName\":\"김치찌개\",\"reason\":\"추워요\"}");
+        assertStatus(200, draft, "reason draft");
+        JsonNode body = json.readTree(draft.body());
+        assertEquals("추워요. 따뜻한 국물이 먹고 싶어요.", body.get("reason").asString());
+        assertEquals("따뜻한 국물이 먹고 싶어요.", body.get("added").asString());
+        assertEquals("graph", body.get("engine").asString());
+    }
+
     private static HttpServer startFakeAi() {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext("/v1/elaborate", exchange -> respond(exchange,
+                    "{\"reason\":\"추워요. 따뜻한 국물이 먹고 싶어요.\",\"added\":\"따뜻한 국물이 먹고 싶어요.\",\"engine\":\"graph\"}"));
             server.createContext("/v1/recommend", exchange -> respond(exchange,
                     "{\"recommendedMenu\":\"AI 김치볶음밥\",\"confidence\":0.9,\"reasons\":[\"테스트\"],\"engine\":\"llm\"}"));
             server.createContext("/v1/assess", exchange -> {

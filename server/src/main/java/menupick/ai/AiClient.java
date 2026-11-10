@@ -52,6 +52,12 @@ public class AiClient {
                 AssessResult.class);
     }
 
+    /** 먹고 싶은 이유를 자세히: 사용자가 쓴 말 뒤에 AI 문장을 덧붙인 결과. */
+    public Optional<ElaborateResult> elaborate(String menuName, String reason) {
+        return post("/v1/elaborate", Map.of("menuName", menuName, "reason", reason), ElaborateResult.class)
+                .filter(result -> result.reason() != null && !result.reason().isBlank());
+    }
+
     private <T> Optional<T> post(String path, Map<String, String> body, Class<T> type) {
         if (!enabled()) {
             return Optional.empty();
@@ -83,6 +89,10 @@ public class AiClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record RecommendResult(String recommendedMenu, double confidence, List<String> reasons, String engine) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ElaborateResult(String reason, String added, String engine) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

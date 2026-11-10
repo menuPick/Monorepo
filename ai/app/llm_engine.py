@@ -150,3 +150,25 @@ def assess(menu_name: str, reason: str, recommended_menu: str) -> AssessResponse
                               reasons=_reasons(data.get("reasons")), engine="llm")
     except (KeyError, TypeError, ValueError):
         return None
+
+
+_ELABORATE_SCHEMA = {
+    "type": "object",
+    "properties": {"added": {"type": "string"}},
+    "required": ["added"],
+}
+
+
+def elaborate(menu_name: str, reason: str) -> str | None:
+    """사용자가 쓴 이유 뒤에 덧붙일 문장(2~3문장)만 받습니다. 사용자의 말은 바꾸지 않습니다."""
+    data = _ask(
+        "학생이 쓴 '먹고 싶은 이유' 뒤에 이어 붙일 문장을 2~3개 써 주세요. 학생의 말투(해요체)로, "
+        "학생이 쓴 내용을 반복하지 말고 이유를 더 구체적으로 보충하세요. 술·담배 등 급식에 맞지 않는 내용은 쓰지 마세요. "
+        "added에는 덧붙일 문장만 넣으세요.",
+        _user_block(menuName=menu_name, reason=reason),
+        _ELABORATE_SCHEMA,
+    )
+    if data is None:
+        return None
+    added = " ".join(str(data.get("added", "")).split())[:500]
+    return added or None

@@ -35,7 +35,7 @@ def find_keywords(text: str, keywords: Iterable[str]) -> set[str]:
 # 특징 → 입력에서 찾을 표현. 한 글자 표현(국, 면, 밥, 탕)은 다른 낱말("먹으면", "설탕")과 겹쳐 쓰지 않습니다.
 ATTRIBUTES: dict[str, tuple[str, ...]] = {
     "매운": ("매운", "맵게", "매콤", "얼큰", "칼칼", "spicy"),
-    "따뜻한": ("따뜻", "뜨끈", "추운", "추워", "쌀쌀", "비 오는", "비오는", "겨울"),
+    "따뜻한": ("따뜻", "뜨끈", "추운", "추워", "쌀쌀", "비 오는", "비오는", "비가 와", "비가 오", "비 와", "겨울"),
     "시원한": ("시원", "더운", "더워", "여름", "차가운"),
     "국물": ("국물", "찌개", "전골"),
     "채소": ("채소", "야채", "샐러드", "나물", "건강"),
@@ -176,8 +176,9 @@ class MenuGraph:
 
 # (플래그, 점수, 키워드, 근거)
 RISK_RULES: tuple[tuple[str, float, tuple[str, ...], str], ...] = (
-    ("not_food", 0.9, ("세제", "독극물", "독버섯", "농약", "플라스틱", "벌레", "담배", "소주", "맥주",
-                       "막걸리", "와인", "약물"),
+    ("not_food", 0.9, ("세제", "독극물", "독버섯", "농약", "플라스틱", "벌레", "담배", "시가", "소주", "맥주",
+                       "양주", "막걸리", "와인", "위스키", "보드카", "사케", "고량주", "칵테일", "하이볼",
+                       "샴페인", "소맥", "약물"),
      "음식이 아니거나 급식으로 제공할 수 없는 항목입니다."),
     ("prompt_injection", 0.8, ("ignore previous", "system prompt", "이전 지시", "지시를 무시", "프롬프트"),
      "AI 지시를 바꾸려는 문장이 포함돼 있습니다."),
@@ -202,11 +203,102 @@ def recommend(menu_name: str, reason: str) -> RecommendResponse:
     return RecommendResponse(recommendedMenu=menu, confidence=confidence, reasons=reasons, engine="graph")
 
 
+# '술'은 "기술·미술·수술"과 겹치므로 부분 일치 대신 낱말이 '술'로 시작할 때만 봅니다(술, 술안주, 술집). O(L).
+_ALCOHOL_PREFIX = "술"
+_NOT_FOOD_RULE = 0
+
+
+def _mentions_alcohol(text: str) -> bool:
+    return any(token.startswith(_ALCOHOL_PREFIX) for token in text.split())
+
+
 def assess(menu_name: str, reason: str, recommended_menu: str) -> AssessResponse:
-    found = find_keywords(f"{menu_name} {recommended_menu} {reason}", _KEYWORD_TO_RULE)
-    hit_rules = sorted({_KEYWORD_TO_RULE[kw] for kw in found})  # 규칙 표 순서 유지
+    text = f"{menu_name} {recommended_menu} {reason}"
+    found = find_keywords(text, _KEYWORD_TO_RULE)
+    hit_rule_set = {_KEYWORD_TO_RULE[kw] for kw in found}
+    if _mentions_alcohol(text):
+        hit_rule_set.add(_NOT_FOOD_RULE)
+    hit_rules = sorted(hit_rule_set)  # 규칙 표 순서 유지
     flags = [RISK_RULES[i][0] for i in hit_rules]
     reasons = [RISK_RULES[i][3] for i in hit_rules] or ["위험 키워드를 찾지 못했습니다."]
     score = max((RISK_RULES[i][1] for i in hit_rules), default=0.05)
     return AssessResponse(riskScore=score, riskLevel=risk_level(score), flags=flags,  # type: ignore[arg-type]
                           reasons=reasons, engine="graph")
+
+
+# ---------------------------------------------------------------- 이유 자세히 쓰기
+
+# 특징 → 덧붙일 문장. 사용자가 쓴 말 뒤에 붙입니다.
+ATTRIBUTE_SENTENCES: dict[str, str] = {
+    "매운": "매콤한 맛으로 입맛을 확 살리고 싶어요.",
+    "따뜻한": "따뜻한 음식으로 몸을 녹이고 싶어요.",
+    "시원한": "시원하게 더위를 식히고 싶어요.",
+    "국물": "국물이 있으면 밥이랑 같이 든든하게 먹을 수 있어요.",
+    "채소": "채소가 들어가서 건강하게 먹을 수 있으면 좋겠어요.",
+    "비빔": "여러 재료를 비벼 먹으면 맛이 잘 어우러질 것 같아요.",
+    "면": "후루룩 먹는 면 요리가 당겨요.",
+    "고기": "고기가 들어가면 힘이 나서 오후 수업도 버틸 수 있을 것 같아요.",
+    "해산물": "해산물의 감칠맛이 생각나요.",
+    "든든한": "배부르게 먹고 남은 하루도 힘내고 싶어요.",
+    "가벼운": "부담 없이 가볍게 먹고 싶어요.",
+    "달콤한": "달콤한 맛으로 기분 전환을 하고 싶어요.",
+    "밥": "밥과 함께 먹으면 든든할 것 같아요.",
+    "간편": "간편하게 먹을 수 있어서 점심시간에 딱 좋아요.",
+    "튀김": "바삭한 식감이 그리워요.",
+}
+MAX_ADDED_SENTENCES = 3
+GENERIC_SENTENCES = [
+    "요즘 급식에서 먹고 싶었던 메뉴가 나오면 점심시간이 더 기다려질 것 같아요.",
+    "친구들과 다 같이 맛있게 먹을 수 있는 메뉴면 좋겠어요.",
+]
+
+
+def _has_final_consonant(word: str) -> bool:
+    last = word[-1] if word else ""
+    return "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 != 0
+
+
+def _josa(word: str, with_final: str, without_final: str) -> str:
+    return word + (with_final if _has_final_consonant(word) else without_final)
+
+
+def elaborate(menu_name: str, reason: str) -> tuple[str, str]:
+    """(전체 이유, 덧붙인 부분). 사용자가 쓴 말은 바꾸지 않고 뒤에 문장을 덧붙입니다.
+
+    입력에서 찾은 특징 + 메뉴(그래프에 있으면 그 메뉴의 특징)로 문장을 고릅니다. O(N + V + E).
+    """
+    original = reason.strip()
+    menu = menu_name.strip()
+    # 위험한 메뉴(술·담배 등)나 그래프에 없는 말은 문장에 넣지 않습니다.
+    if menu and assess(menu, "", "").riskLevel == "high":
+        menu = ""
+
+    seeds = GRAPH.seeds(f"{menu} {original}")
+    attrs = [s[2:] for s in seeds if s.startswith("a:")]
+    target = menu if f"m:{menu}" in GRAPH.adj else ""
+    if not target:
+        target = GRAPH.recommend(f"{menu} {original}")[0] if seeds else ""
+    if target:
+        attrs += [a for a in MENUS[target] if a not in attrs]
+    attrs.sort(key=list(ATTRIBUTES).index)  # 같은 입력이면 항상 같은 문장 순서
+
+    sentences: list[str] = []
+    if not original:
+        sentences.append(f"{_josa(target or '오늘 메뉴', '이', '가')} 먹고 싶어요.")
+    for attr in attrs:
+        sentence = ATTRIBUTE_SENTENCES[attr]
+        if sentence not in sentences:
+            sentences.append(sentence)
+        if len(sentences) >= MAX_ADDED_SENTENCES:
+            break
+    if target and len(sentences) < MAX_ADDED_SENTENCES + 1:
+        sentences.append(f"{_josa(target, '은', '는')} 급식으로 나오면 다 같이 맛있게 먹을 수 있을 것 같아요.")
+    if not attrs and not target:
+        # 단서가 하나도 없을 때(예: "아무거나", "그냥요")도 이유를 조금 더 채워 줍니다.
+        sentences += GENERIC_SENTENCES
+
+    added = " ".join(sentences)
+    if original and original[-1] not in ".!?~":
+        original += "."
+    full = f"{original} {added}".strip()
+    return full[:2000], added

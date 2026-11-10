@@ -46,6 +46,19 @@ class AssessResponse(BaseModel):
     engine: Engine
 
 
+class ElaborateRequest(BaseModel):
+    menuName: str = Field(default="", max_length=255)
+    reason: str = Field(default="", max_length=2000)
+
+
+class ElaborateResponse(BaseModel):
+    """reason = 사용자가 쓴 말(그대로) + AI가 덧붙인 문장."""
+
+    reason: str = Field(max_length=2000)
+    added: str
+    engine: Engine
+
+
 def risk_level(score: float) -> RiskLevel:
     if score >= 0.7:
         return "high"
