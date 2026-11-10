@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:user/data/user_api.dart';
 import 'package:user/widgets/model_banner.dart';
 import 'package:user/widgets/responsive_scaffold.dart';
+
+/// 관리자 웹 주소. 비우면 API 서버의 /admin/ 을 씁니다.
+const String kAdminWebUrl = String.fromEnvironment('ADMIN_WEB_URL');
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -20,6 +24,21 @@ class _AboutPageState extends State<AboutPage> {
   void dispose() {
     _messageController.dispose();
     super.dispose();
+  }
+
+  /// 관리자 Flutter Web을 브라우저로 엽니다. API 서버가 /admin/ 에서 제공합니다
+  /// (scripts/build_admin_web_local.ps1). ADMIN_WEB_URL로 다른 주소를 줄 수 있습니다.
+  Future<void> _openAdminWeb() async {
+    final url = Uri.parse(
+      kAdminWebUrl.isNotEmpty ? kAdminWebUrl : '${_api.baseUrl}/admin/',
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('관리자 페이지를 열 수 없습니다: $url')),
+      );
+    }
   }
 
   @override
@@ -64,6 +83,8 @@ class _AboutPageState extends State<AboutPage> {
                 subtitle: 'junsumon090608@dgsw.hs.kr',
                 borderColor: borderColor,
                 hintColor: hintColor,
+                actionLabel: '관리자 페이지 열기',
+                onTap: _openAdminWeb,
               ),
               const SizedBox(height: 18),
               SizedBox(
@@ -131,42 +152,74 @@ class _InfoBox extends StatelessWidget {
     required this.subtitle,
     required this.borderColor,
     required this.hintColor,
+    this.actionLabel,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final Color borderColor;
   final Color hintColor;
+  final String? actionLabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+    const accent = Color(0xFF0B18F1);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final linkColor = isDark ? const Color(0xFFBFC4FF) : accent;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+        onTap: onTap,
+        child: Ink(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: borderColor, width: 1),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 16,
-              height: 1.4,
-              color: hintColor,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.4,
+                  color: hintColor,
+                ),
+              ),
+              if (actionLabel != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.open_in_new_rounded, size: 16, color: linkColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      actionLabel!,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: linkColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

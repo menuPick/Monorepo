@@ -1,14 +1,16 @@
 package menupick.recommendation;
 
+import org.springframework.stereotype.Component;
+
 import java.util.Locale;
 
 /** 현재 운영을 위한 가벼운 fallback 추천 엔진입니다. */
-public final class RuleBasedRecommendationEngine implements RecommendationEngine {
+@Component
+public class RuleBasedRecommendationEngine implements RecommendationEngine {
     @Override
     public String recommend(String menuName, String reason) {
         String safeMenuName = menuName == null ? "" : menuName;
-        String source = (safeMenuName + " " + (reason == null ? "" : reason))
-                .toLowerCase(Locale.ROOT);
+        String source = (safeMenuName + " " + (reason == null ? "" : reason)).toLowerCase(Locale.ROOT);
 
         // 사용자가 메뉴명을 직접 입력했다면 이유의 일반 키워드보다 우선합니다.
         if (safeMenuName.contains("라면")) {

@@ -47,11 +47,19 @@ void main() {
     await tester.enterText(fields.at(0), '라면');
     await tester.enterText(fields.at(1), '간단하고 따뜻한 음식이 먹고 싶어요');
 
-    await tester.tap(find.text('국/찌개'));
     final submit = find.text('메뉴를 올려봅시다.');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
-    await tester.pumpAndSettle(const Duration(seconds: 8));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('AI 답변 생성 중'), findsOneWidget);
+
+    // AI(로컬 LLM) 응답을 기다립니다. 로딩 페이지는 애니메이션이 계속돼 pumpAndSettle을 쓰지 않습니다.
+    final deadline = DateTime.now().add(const Duration(seconds: 120));
+    while (find.text('AI 답변 생성 중').evaluate().isNotEmpty &&
+        DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await tester.pumpAndSettle(const Duration(seconds: 2));
 
     expect(find.text('관리자가 결정한 메뉴를 확인하세요'), findsOneWidget);
   });

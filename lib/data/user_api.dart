@@ -77,7 +77,6 @@ class UserApi {
   Future<RecommendationDto> submitRecommendation({
     required String menuName,
     required String reason,
-    required String category,
   }) async {
     final response = await _client
         .post(
@@ -86,12 +85,11 @@ class UserApi {
           body: jsonEncode({
             'menuName': menuName,
             'reason': reason,
-            'category': category,
-            // 비워두면 서버가 추천 메뉴를 생성합니다.
+            // 비워두면 서버가 AI로 추천 메뉴를 생성합니다(로컬 LLM이라 수십 초 걸릴 수 있음).
             'recommendedMenu': '',
           }),
         )
-        .timeout(const Duration(seconds: 6));
+        .timeout(const Duration(seconds: 120));
 
     final body = _decodeJson(response);
     if (response.statusCode == 429 &&

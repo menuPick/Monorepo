@@ -87,6 +87,29 @@ class AdminApi {
         .toList(growable: false);
   }
 
+  /// 최근 추천의 AI 위험 판별 결과. AI 서버가 꺼져 있거나 실패하면 빈 맵입니다.
+  Future<Map<int, AiAssessmentItem>> fetchAiAssessments({
+    required String token,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await http.get(
+        _uri('/api/admin/ai-assessments', {'limit': '$limit'}),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode != 200) return const {};
+      final items = (_decodeJson(response)['items'] as List?) ?? const [];
+      return {
+        for (final item in items.whereType<Map<String, dynamic>>().map(
+          AiAssessmentItem.fromJson,
+        ))
+          item.recommendationId: item,
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
   Future<List<InquiryItem>> fetchInquiries({
     required String token,
     int limit = 50,

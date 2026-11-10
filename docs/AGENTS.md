@@ -1,19 +1,19 @@
 # AGENTS.md
 
-> 기준일: 2026-11-02
+> 기준일: 2026-11-10
 
 ## 현재 작업 모드
 
 현재는 기준선 보존 모드입니다. 사용자가 명시적으로 요청하기 전에는 큰 코드 변경을 시작하지 않습니다.
 
+2026-11-10에 사용자 요청으로 Python AI 서버(`ai/`)와 AI 추천·위험 메뉴 판별을 구현했습니다([`ai-design.md`](ai-design.md)).
+
 보류 대상:
 
-- Java 서버의 Go 전환
-- Python AI 서버 추가
-- AI 추천·위험 메뉴 판별 구현
-- 일일 퀘스트 구현
-- 데이터베이스 교체
-- API 계약 변경
+- Java 서버의 Go 전환 (검토 결과 불필요, [`ai-design.md`](ai-design.md#결정-기록))
+- 일일 퀘스트: 만들지 않음 (2026-11-10 결정, 설계는 [`quest-design.md`](quest-design.md)에 참고용으로만 남김)
+- 운영 데이터베이스(MySQL/MariaDB) 교체 (로컬 개발 DB는 2026-11-10에 파일 → H2로 바꿈)
+- 기존 API 필드 변경·삭제 (추가는 [`api-contract.md`](api-contract.md)에 기록)
 
 ## 작업 전 확인
 
@@ -48,14 +48,15 @@
 
 - AI가 메뉴를 직접 삭제·공개·차단하지 않도록 합니다.
 - AI 결과는 점수와 근거로 저장하고 최종 변경은 규칙 또는 관리자 승인을 거칩니다.
-- AI 작업과 퀘스트 보상은 중복 처리와 재시작 상황을 고려합니다.
+- AI 작업은 중복 처리와 재시작 상황을 고려합니다.
 - Go, Python, Redis, PostgreSQL 같은 기술을 먼저 추가하지 말고 설계와 필요성을 먼저 확정합니다.
 
 ## 검증 원칙
 
 코드 변경이 승인된 경우에만 관련 검증을 실행합니다.
 
-- `cd server && mvn -q test`
+- `cd server && ./mvnw -q test`
+- `cd ai && .venv/Scripts/python -m pytest -q` (Windows; 다른 OS는 `.venv/bin/python`)
 - `cd .. && flutter analyze`
 - `git diff --check`
 

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MenuPick Server</title>
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#667085; --line:#e4e7ec; --ok:#12805c; --bad:#c4320a; --accent:#3b5bdb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#111418; --card:#1a1f26; --text:#e6e9ef; --muted:#98a2b3; --line:#2a313b; --ok:#3ccf91; --bad:#ff7a59; --accent:#7c9cff; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+    main { max-width:760px; margin:0 auto; padding:32px 16px 48px; }
+    h1 { font-size:22px; margin:0 0 4px; }
+    p.sub { color:var(--muted); margin:0 0 24px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+    .row { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid var(--line); }
+    .row:last-child { border-bottom:0; }
+    .k { color:var(--muted); }
+    .ok { color:var(--ok); font-weight:600; }
+    .bad { color:var(--bad); font-weight:600; }
+    a.btn { display:inline-block; padding:8px 14px; border-radius:8px; background:var(--accent); color:#fff; text-decoration:none; font-weight:600; margin-right:8px; }
+    code { font-family:ui-monospace, Consolas, monospace; font-size:13px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    td { padding:6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+    td:first-child { width:70px; color:var(--muted); }
+    pre { margin:8px 0 0; white-space:pre-wrap; word-break:break-all; font-size:13px; color:var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>MenuPick Server</h1>
+  <p class="sub">Spring Boot 로컬 확인 페이지</p>
+
+  <section class="card">
+    <div class="row"><span class="k">상태</span><span id="status">확인 중…</span></div>
+    <div class="row"><span class="k">API 버전</span><span id="version">-</span></div>
+    <div class="row"><span class="k">저장소</span><span id="storage">-</span></div>
+    <div class="row"><span class="k">결정 메뉴</span><span id="latest">-</span></div>
+  </section>
+
+  <section class="card">
+    <a class="btn" href="swagger-ui.html">API 테스트 (Swagger UI)</a>
+    <a class="btn" href="health">/health</a>
+    <pre>관리자 API: Swagger에서 POST /api/admin/login 실행 → token 복사 → Authorize에 입력</pre>
+  </section>
+
+  <section class="card">
+    <table>
+      <tr><td>POST</td><td><code>/api/recommendations</code> 메뉴 추천 (네트워크당 월 1회)</td></tr>
+      <tr><td>GET</td><td><code>/api/recommendations/latest</code> 공개된 결정 메뉴</td></tr>
+      <tr><td>POST</td><td><code>/api/inquiries</code> 문의</td></tr>
+      <tr><td>POST</td><td><code>/api/admin/login</code> 관리자 로그인</td></tr>
+      <tr><td>GET</td><td><code>/api/admin/recommendations</code>, <code>/api/admin/inquiries</code></td></tr>
+      <tr><td>POST</td><td><code>/api/admin/decision</code>, 삭제는 같은 목록 경로에 <code>{"ids":[…]}</code></td></tr>
+    </table>
+  </section>
+</main>
+<script>
+  const set = (id, text, cls) => { const el = document.getElementById(id); el.textContent = text; if (cls) el.className = cls; };
+  fetch('health').then(r => r.json()).then(h => {
+    set('status', h.status === 'ok' ? '정상' : h.status, h.status === 'ok' ? 'ok' : 'bad');
+    set('version', h.version || '-');
+    set('storage', h.storage === 'file' ? '로컬 파일 (data/)' : 'MySQL/MariaDB');
+  }).catch(() => set('status', '응답 없음', 'bad'));
+  fetch('api/recommendations/latest').then(async r => {
+    const b = await r.json();
+    set('latest', r.ok ? `${b.recommendedMenu} (#${b.id}, ${b.category})` : (b.message || '없음'));
+  }).catch(() => set('latest', '조회 실패'));
+</script>
+</body>
+</html>

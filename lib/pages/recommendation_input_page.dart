@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:user/data/user_api.dart';
-import 'package:user/navigation/app_routes.dart';
+import 'package:user/pages/ai_loading_page.dart';
 import 'package:user/widgets/entrance_animations.dart';
 import 'package:user/widgets/model_banner.dart';
 import 'package:user/widgets/responsive_scaffold.dart';
@@ -15,20 +17,9 @@ class RecommendationInputPage extends StatefulWidget {
 }
 
 class _RecommendationInputPageState extends State<RecommendationInputPage> {
-  static const List<String> _categories = [
-    '주식',
-    '국/찌개',
-    '주찬(메인 반찬)',
-    '부찬(보조 반찬)',
-    '김치류',
-    '후식(디저트)',
-    '미분류',
-  ];
-
   final TextEditingController _menuNameController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
   bool _isSaving = false;
-  String _selectedCategory = '미분류';
 
   final UserApi _api = UserApi();
 
@@ -54,45 +45,47 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
       _isSaving = true;
     });
 
-    var isSaved = false;
-    try {
-      await _api.submitRecommendation(
-        menuName: menuName.isEmpty ? '메뉴명 미입력' : menuName,
-        reason: reason.isEmpty ? '이유 미입력' : reason,
-        category: _selectedCategory,
-      );
-      isSaved = true;
-    } on MonthlyRecommendationLimitException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } on UserApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('서버 저장 실패: ${e.message}')));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('서버 저장 중 오류가 발생했습니다.')));
-    }
+    // AI가 답을 만드는 동안 로딩 페이지를 보여줍니다.
+    // 저장에 성공하면 로딩 페이지가 결과 페이지로 이동하고, 실패하면 오류 메시지를 들고 돌아옵니다.
+    final error = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => AiLoadingPage(
+          task: () => _submit(
+            menuName: menuName.isEmpty ? '메뉴명 미입력' : menuName,
+            reason: reason.isEmpty ? '이유 미입력' : reason,
+          ),
+        ),
+      ),
+    );
 
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     setState(() {
       _isSaving = false;
     });
-
-    // 서버 DB 저장이 성공한 경우에만 결과 페이지로 이동합니다.
-    if (!isSaved) {
-      return;
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
     }
+  }
 
-    Navigator.of(context).pushNamed(AppRoutes.result);
+  /// 성공하면 null, 실패하면 사용자에게 보여줄 메시지.
+  Future<String?> _submit({
+    required String menuName,
+    required String reason,
+  }) async {
+    try {
+      await _api.submitRecommendation(menuName: menuName, reason: reason);
+      return null;
+    } on MonthlyRecommendationLimitException catch (e) {
+      return e.message;
+    } on UserApiException catch (e) {
+      return '서버 저장 실패: ${e.message}';
+    } on TimeoutException catch (_) {
+      return 'AI 응답이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.';
+    } catch (_) {
+      return '서버 저장 중 오류가 발생했습니다.';
+    }
   }
 
   @override
@@ -145,23 +138,6 @@ class _RecommendationInputPageState extends State<RecommendationInputPage> {
                   hintColor: hintColor,
                   height: 72,
                   controller: _menuNameController,
-                ),
-              ),
-              const SizedBox(height: 24),
-              EntranceFadeSlide(
-                delay: const Duration(milliseconds: 190),
-                fromYOffset: 16,
-                duration: const Duration(milliseconds: 540),
-                child: _CategoryScroller(
-                  categories: _categories,
-                  selectedCategory: _selectedCategory,
-                  textColor: textColor,
-                  borderColor: borderColor,
-                  onSelected: _isSaving
-                      ? null
-                      : (category) {
-                          setState(() => _selectedCategory = category);
-                        },
                 ),
               ),
               const SizedBox(height: 24),
@@ -249,86 +225,6 @@ class _OutlineField extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _CategoryScroller extends StatelessWidget {
-  const _CategoryScroller({
-    required this.categories,
-    required this.selectedCategory,
-    required this.textColor,
-    required this.borderColor,
-    required this.onSelected,
-  });
-
-  final List<String> categories;
-  final String selectedCategory;
-  final Color textColor;
-  final Color borderColor;
-  final ValueChanged<String>? onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedColor = isDark
-        ? const Color(0xFFBFC4FF)
-        : const Color(0xFF0B18F1);
-    final selectedTextColor = isDark ? Colors.black : Colors.white;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            '카테고리',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 46,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              final selected = category == selectedCategory;
-              return ChoiceChip(
-                label: Text(category),
-                selected: selected,
-                onSelected: onSelected == null
-                    ? null
-                    : (_) => onSelected!(category),
-                showCheckmark: false,
-                labelStyle: TextStyle(
-                  color: selected ? selectedTextColor : textColor,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-                selectedColor: selectedColor,
-                backgroundColor: Colors.transparent,
-                disabledColor: Colors.transparent,
-                shape: StadiumBorder(
-                  side: BorderSide(
-                    color: selected ? selectedColor : borderColor,
-                    width: selected ? 0 : 1,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }

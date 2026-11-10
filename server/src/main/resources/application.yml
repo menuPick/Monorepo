@@ -1,0 +1,75 @@
+server:
+  # 우선순위: --port=, PORT 환경변수, 기본 18080
+  port: ${port:${PORT:18080}}
+  shutdown: graceful
+  compression:
+    enabled: true
+    # 관리자 Flutter Web(/admin/)의 JS·WASM도 압축해 에뮬레이터에서 빨리 받게 합니다.
+    mime-types: application/json,text/html,text/css,text/javascript,application/javascript,application/wasm,application/manifest+json,image/svg+xml
+    min-response-size: 2KB
+  tomcat:
+    max-http-form-post-size: 16KB
+
+spring:
+  application:
+    name: menu-pick-server
+  main:
+    banner-mode: off
+  threads:
+    virtual:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  autoconfigure:
+    # DataSource는 DB_URL이 있을 때만 StorageConfig에서 직접 만듭니다(없으면 파일 저장소).
+    exclude: org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:true}
+  swagger-ui:
+    enabled: ${API_DOCS_ENABLED:true}
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+menupick:
+  api-version: "2026-11-10"
+  # 관리자 Flutter Web 빌드 폴더(scripts/build_admin_web_local.ps1). 있으면 /admin/ 에서 제공합니다.
+  admin-web-dir: ${ADMIN_WEB_DIR:../build/admin_web}
+  admin-email: admin@local
+  max-body-bytes: 16384
+  trust-proxy-headers: ${TRUST_PROXY_HEADERS:false}
+  allowed-origins: >-
+    http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:18080,
+    http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080,http://127.0.0.1:18080,
+    ${ALLOWED_ORIGINS:}
+  admin:
+    id: ${ADMIN_ID:admin}
+    id-hash: ${ADMIN_ID_HASH:}
+    id-hash-file: ${ADMIN_ID_HASH_FILE:}
+    session-ttl: 8h
+    login-fail-limit: 5
+    login-fail-window: 5m
+  rate-limit:
+    window: 10m
+    recommendations: ${RECOMMENDATION_RATE_LIMIT:3}
+    inquiries: 5
+    # 네트워크당 월 1회 추천 제한. run_local 스크립트는 false로 실행합니다.
+    monthly-recommendation: ${MONTHLY_RECOMMENDATION_LIMIT:true}
+  storage:
+    dir: ${DATA_DIR:data}
+  db:
+    url: ${DB_URL:}
+    user: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+    max-pool-size: ${DB_MAX_POOL_SIZE:10}
+  ai:
+    # 예: http://localhost:18090 (ai/run_local.ps1). 비어 있으면 AI 기능 끔.
+    base-url: ${AI_BASE_URL:}
+    token: ${AI_SERVICE_TOKEN:}
+    # 로컬 무료 모델(Ollama)은 CPU에서 느릴 수 있어 넉넉하게 둡니다. 넘으면 규칙 엔진으로 대체.
+    timeout: ${AI_TIMEOUT:90s}
+
+logging:
+  level:
+    root: INFO
